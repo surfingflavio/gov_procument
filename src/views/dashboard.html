@@ -3,27 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>招標資訊查詢系統 - RFP Dashboard</title>
+    <title>雲力橘子_招標資訊分析</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #0b0f19;
-            --card-bg: rgba(17, 24, 39, 0.7);
-            --card-border: rgba(255, 255, 255, 0.08);
-            --text-primary: #f3f4f6;
-            --text-secondary: #9ca3af;
-            --primary: #6366f1;
-            --primary-glow: rgba(99, 102, 241, 0.15);
-            --accent-green: #10b981;
-            --accent-blue: #3b82f6;
-            --accent-purple: #8b5cf6;
+            --bg-color: #f3f4f6;
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --card-border: rgba(0, 0, 0, 0.08);
+            --text-primary: #111827;
+            --text-secondary: #4b5563;
+            --primary: #4f46e5;
+            --primary-glow: rgba(79, 70, 229, 0.15);
+            --accent-green: #059669;
+            --accent-blue: #1d4ed8;
+            --accent-purple: #7c3aed;
             --font-display: 'Outfit', 'Inter', 'Noto Sans TC', sans-serif;
             --font-body: 'Inter', 'Noto Sans TC', sans-serif;
             --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
+
 
         * {
             box-sizing: border-box;
@@ -34,8 +35,8 @@
         body {
             background-color: var(--bg-color);
             background-image: 
-                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
-                radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.1) 0px, transparent 50%);
+                radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.06) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(124, 58, 237, 0.05) 0px, transparent 50%);
             background-attachment: fixed;
             color: var(--text-primary);
             font-family: var(--font-body);
@@ -153,9 +154,9 @@
         }
 
         .stat-card:hover {
-            border-color: rgba(99, 102, 241, 0.3);
+            border-color: rgba(79, 70, 229, 0.3);
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
         }
 
         .stat-info h3 {
@@ -208,10 +209,10 @@
         .filter-tabs {
             display: flex;
             gap: 0.5rem;
-            background: rgba(0, 0, 0, 0.2);
+            background: rgba(0, 0, 0, 0.05);
             padding: 0.25rem;
             border-radius: 9999px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.05);
         }
 
         .tab-chip {
@@ -234,7 +235,7 @@
         .tab-chip.active {
             background: var(--primary);
             color: white;
-            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);
+            box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2);
         }
 
         /* Search Input */
@@ -247,7 +248,7 @@
 
         .search-input {
             width: 100%;
-            background: rgba(0, 0, 0, 0.3);
+            background: #ffffff;
             border: 1px solid var(--card-border);
             padding: 0.75rem 1rem 0.75rem 2.5rem;
             border-radius: 0.75rem;
@@ -281,7 +282,7 @@
             overflow: hidden;
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.05);
         }
 
         .table-responsive {
@@ -333,7 +334,7 @@
             padding: 1.15rem 1.5rem;
             font-size: 0.95rem;
             color: var(--text-primary);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
             vertical-align: middle;
             white-space: nowrap;
         }
@@ -347,13 +348,13 @@
         }
 
         tr:hover td {
-            background-color: rgba(255, 255, 255, 0.02);
+            background-color: rgba(0, 0, 0, 0.015);
         }
 
         /* Specific Column Styles */
         .td-agency {
             font-weight: 500;
-            color: #d1d5db;
+            color: var(--text-primary);
             max-width: 15em;
             word-break: break-all;
             white-space: normal;
@@ -375,7 +376,7 @@
         .td-budget {
             font-family: var(--font-display);
             font-weight: 700;
-            color: #f3f4f6;
+            color: var(--text-primary);
         }
 
         .badge-source {
@@ -387,20 +388,20 @@
             text-transform: uppercase;
         }
 
-        .badge-acebidx { background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.2); }
-        .badge-pcc { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.2); }
+        .badge-acebidx { background: rgba(99, 102, 241, 0.1); color: #4f46e5; border: 1px solid rgba(99, 102, 241, 0.15); }
+        .badge-pcc { background: rgba(16, 185, 129, 0.1); color: #059669; border: 1px solid rgba(16, 185, 129, 0.15); }
 
         .btn-go {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(0, 0, 0, 0.04);
+            border: 1px solid rgba(0, 0, 0, 0.08);
             border-radius: 0.5rem;
             padding: 0.4rem 0.8rem;
             font-size: 0.8rem;
             font-weight: 600;
-            color: #d1d5db;
+            color: var(--text-secondary);
             text-decoration: none;
             transition: var(--transition);
         }
@@ -447,19 +448,20 @@
             position: fixed;
             bottom: 2rem;
             right: 2rem;
-            background: rgba(17, 24, 39, 0.9);
+            background: rgba(255, 255, 255, 0.95);
             border: 1px solid var(--primary);
             padding: 1rem 1.5rem;
             border-radius: 0.75rem;
-            color: white;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            z-index: 99;
+            color: var(--text-primary);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+            z-index: 1100;
             transform: translateY(150%);
             opacity: 0;
             transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s;
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            border-left: 5px solid var(--primary);
         }
 
         .toast.show {
@@ -476,13 +478,14 @@
         }
 
         .mobile-card {
-            background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(255,255,255,0.05);
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(0, 0, 0, 0.05);
             border-radius: 0.75rem;
             padding: 1rem;
             display: flex;
             flex-direction: column;
             gap: 0.75rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
         }
 
         .mobile-card-header {
@@ -507,7 +510,260 @@
 
         .mobile-label {
             font-weight: 500;
-            color: rgba(255,255,255,0.4);
+            color: rgba(0, 0, 0, 0.45);
+        }
+
+        /* Button Recipient */
+        .btn-recipient {
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            color: var(--text-primary);
+            padding: 0.75rem 1.5rem;
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.95rem;
+            border-radius: 9999px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+            transition: var(--transition);
+        }
+
+        .btn-recipient:hover {
+            background: rgba(0, 0, 0, 0.09);
+            border-color: rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .btn-recipient:active {
+            transform: translateY(1px);
+        }
+
+        /* Recipient Modal Overlay & Card styling */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-card {
+            background: #ffffff;
+            border: 1px solid var(--card-border);
+            border-radius: 1.5rem;
+            width: 90%;
+            max-width: 650px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transform: scale(0.95);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .modal-overlay.open .modal-card {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--card-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f9fafb;
+        }
+
+        .modal-header h2 {
+            font-family: var(--font-display);
+            font-size: 1.35rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-close {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.75rem;
+            cursor: pointer;
+            line-height: 1;
+            transition: var(--transition);
+        }
+
+        .btn-close:hover {
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /* Recipient Form */
+        #recipient-form .form-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            flex: 1;
+            min-width: 180px;
+        }
+
+        .form-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .form-group input {
+            background: #ffffff;
+            border: 1px solid var(--card-border);
+            padding: 0.65rem 0.85rem;
+            border-radius: 0.5rem;
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 0.9rem;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .form-group input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+
+        .btn-submit {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.65rem 1.5rem;
+            font-weight: 600;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: var(--transition);
+            height: 38px;
+            font-family: var(--font-body);
+        }
+
+        .btn-submit:hover {
+            background: var(--accent-purple);
+            transform: translateY(-1px);
+        }
+
+        .btn-cancel {
+            background: rgba(0, 0, 0, 0.05);
+            color: var(--text-primary);
+            border: 1px solid var(--card-border);
+            padding: 0.65rem 1.25rem;
+            font-weight: 600;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: var(--transition);
+            height: 38px;
+            font-family: var(--font-body);
+        }
+
+        .btn-cancel:hover {
+            background: rgba(0, 0, 0, 0.08);
+        }
+
+        /* Recipient Table */
+        .recipient-table-wrapper {
+            max-height: 230px;
+            overflow-y: auto;
+            border: 1px solid var(--card-border);
+            border-radius: 0.75rem;
+            background: #ffffff;
+        }
+
+        .recipient-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .recipient-table th, .recipient-table td {
+            padding: 0.75rem 1rem;
+            font-size: 0.9rem;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .recipient-table th {
+            background: #f9fafb;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-align: left;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        .recipient-table tr:hover td {
+            background-color: rgba(0, 0, 0, 0.01);
+        }
+
+        .recipient-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .btn-action-edit, .btn-action-delete {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 0.95rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            transition: var(--transition);
+        }
+
+        .btn-action-edit {
+            color: var(--primary);
+        }
+        .btn-action-edit:hover {
+            background: rgba(79, 70, 229, 0.08);
+        }
+
+        .btn-action-delete {
+            color: #ef4444;
+        }
+        .btn-action-delete:hover {
+            background: rgba(239, 68, 68, 0.08);
+        }
+
+        .recipient-empty {
+            padding: 2.5rem;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
         }
 
         @media (max-width: 768px) {
@@ -546,13 +802,19 @@
         <!-- Header -->
         <header>
             <div class="logo-section">
-                <h1>🔍 招標資訊查詢系統</h1>
+                <h1>🔍 雲力橘子_招標資訊分析</h1>
                 <p>搜尋與收集台灣「資訊」、「資安」、「資通安全」相關的政府及民間招標公告</p>
             </div>
-            <button id="sync-btn" class="btn-sync" onclick="triggerSync()">
-                <span id="sync-icon">🔄</span>
-                <span id="sync-text">立即同步資料</span>
-            </button>
+            <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;" class="header-action-group">
+                <button id="sync-btn" class="btn-sync" onclick="triggerSync()">
+                    <span id="sync-icon">🔄</span>
+                    <span id="sync-text">立即同步資料</span>
+                </button>
+                <button id="recipient-btn" class="btn-recipient" onclick="openRecipientModal()">
+                    <span>👥</span>
+                    <span>收件人管理</span>
+                </button>
+            </div>
         </header>
 
         <!-- Stats Section -->
@@ -649,6 +911,53 @@
                 <p>請嘗試點擊右上角的「立即同步資料」以獲取最新標案公告。</p>
             </div>
         </main>
+    </div>
+
+    <!-- Recipient Management Modal -->
+    <div id="recipient-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>👥 收件人管理</h2>
+                <button class="btn-close" onclick="closeRecipientModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Add/Edit Recipient Form -->
+                <form id="recipient-form" onsubmit="handleRecipientSubmit(event)">
+                    <input type="hidden" id="recipient-id">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="recipient-name">姓名</label>
+                            <input type="text" id="recipient-name" required placeholder="例如：張小明">
+                        </div>
+                        <div class="form-group">
+                            <label for="recipient-email">電子郵件</label>
+                            <input type="email" id="recipient-email" required placeholder="例如：xiaoming@example.com">
+                        </div>
+                        <button type="submit" id="recipient-submit-btn" class="btn-submit">新增</button>
+                        <button type="button" id="recipient-cancel-btn" class="btn-cancel" onclick="resetRecipientForm()" style="display: none;">取消</button>
+                    </div>
+                </form>
+
+                <!-- Recipient List Table -->
+                <div class="recipient-table-wrapper">
+                    <table class="recipient-table">
+                        <thead>
+                            <tr>
+                                <th>姓名</th>
+                                <th>電子郵件</th>
+                                <th style="width: 120px; text-align: center;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recipient-list-body">
+                            <!-- Dynamic recipients list -->
+                        </tbody>
+                    </table>
+                    <div id="recipient-empty" class="recipient-empty" style="display: none;">
+                        <p>目前沒有收件人資料</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Notification Toast -->
@@ -903,6 +1212,141 @@
             setTimeout(() => {
                 toast.classList.remove('show');
             }, 4000);
+        }
+
+        // --- Recipient Management System ---
+        let recipients = [];
+
+        function openRecipientModal() {
+            const modal = document.getElementById('recipient-modal');
+            modal.classList.add('open');
+            fetchRecipients();
+        }
+
+        function closeRecipientModal() {
+            const modal = document.getElementById('recipient-modal');
+            modal.classList.remove('open');
+            resetRecipientForm();
+        }
+
+        async function fetchRecipients() {
+            try {
+                const response = await fetch('/api/recipients');
+                if (!response.ok) throw new Error('無法載入收件人');
+                recipients = await response.json();
+                renderRecipients();
+            } catch (err) {
+                console.error(err);
+                showToast('❌ 讀取收件人清單失敗', '⚠️');
+            }
+        }
+
+        function renderRecipients() {
+            const tbody = document.getElementById('recipient-list-body');
+            const emptyEl = document.getElementById('recipient-empty');
+            tbody.innerHTML = '';
+
+            if (recipients.length === 0) {
+                emptyEl.style.display = 'block';
+                return;
+            }
+            emptyEl.style.display = 'none';
+
+            recipients.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${escapeHtml(r.name)}</td>
+                    <td>${escapeHtml(r.email)}</td>
+                    <td style="text-align: center;">
+                        <button class="btn-action-edit" onclick="editRecipient(${r.id}, '${escapeQuote(r.name)}', '${escapeQuote(r.email)}')">✏️</button>
+                        <button class="btn-action-delete" onclick="deleteRecipient(${r.id})">🗑️</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        function escapeQuote(str) {
+            return str.replace(/'/g, "\\'");
+        }
+
+        async function handleRecipientSubmit(event) {
+            event.preventDefault();
+            const idInput = document.getElementById('recipient-id');
+            const nameInput = document.getElementById('recipient-name');
+            const emailInput = document.getElementById('recipient-email');
+            const submitBtn = document.getElementById('recipient-submit-btn');
+
+            const id = idInput.value;
+            const name = nameInput.value.trim();
+            const email = emailInput.value.trim();
+
+            if (!name || !email) return;
+
+            submitBtn.disabled = true;
+
+            const isEdit = id !== '';
+            const url = isEdit ? `/api/recipients/${id}` : '/api/recipients';
+            const method = isEdit ? 'PUT' : 'POST';
+
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email })
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || '儲存失敗');
+                }
+
+                showToast(isEdit ? '✅ 收件人更新成功！' : '✅ 成功新增收件人！', '🎉');
+                resetRecipientForm();
+                await fetchRecipients();
+            } catch (err) {
+                console.error(err);
+                showToast(`❌ ${err.message}`, '⚠️');
+            } finally {
+                submitBtn.disabled = false;
+            }
+        }
+
+        function editRecipient(id, name, email) {
+            document.getElementById('recipient-id').value = id;
+            document.getElementById('recipient-name').value = name;
+            document.getElementById('recipient-email').value = email;
+            
+            document.getElementById('recipient-submit-btn').innerText = '儲存';
+            document.getElementById('recipient-cancel-btn').style.display = 'inline-block';
+        }
+
+        function resetRecipientForm() {
+            document.getElementById('recipient-id').value = '';
+            document.getElementById('recipient-name').value = '';
+            document.getElementById('recipient-email').value = '';
+            
+            document.getElementById('recipient-submit-btn').innerText = '新增';
+            document.getElementById('recipient-cancel-btn').style.display = 'none';
+        }
+
+        async function deleteRecipient(id) {
+            if (!confirm('確定要刪除此收件人嗎？')) return;
+
+            try {
+                const response = await fetch(`/api/recipients/${id}`, { method: 'DELETE' });
+                if (!response.ok) throw new Error('刪除失敗');
+                
+                showToast('🗑️ 收件人已成功刪除', '👍');
+                await fetchRecipients();
+            } catch (err) {
+                console.error(err);
+                showToast('❌ 刪除收件人失敗', '⚠️');
+            }
         }
 
         // Initialize on load

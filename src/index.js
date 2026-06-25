@@ -70,6 +70,123 @@ export default {
         });
       }
 
+      // 4. API: Recipients CRUD
+      if (url.pathname === '/api/recipients') {
+        if (!env.DB) {
+          return new Response(JSON.stringify({ error: "Database binding DB not found" }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        if (request.method === 'GET') {
+          const { results } = await env.DB.prepare(
+            "SELECT * FROM recipients ORDER BY created_at DESC"
+          ).all();
+          return new Response(JSON.stringify(results), {
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        if (request.method === 'POST') {
+          try {
+            const body = await request.json();
+            const { name, email } = body;
+            if (!name || !email) {
+              return new Response(JSON.stringify({ error: "姓名與電子郵件為必填欄位" }), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json', ...corsHeaders }
+              });
+            }
+            if (!email.includes('@')) {
+              return new Response(JSON.stringify({ error: "電子郵件格式不正確" }), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json', ...corsHeaders }
+              });
+            }
+
+            await env.DB.prepare(
+              "INSERT INTO recipients (name, email) VALUES (?, ?)"
+            ).bind(name.trim(), email.trim().toLowerCase()).run();
+
+            return new Response(JSON.stringify({ success: true }), {
+              headers: { 'Content-Type': 'application/json', ...corsHeaders }
+            });
+          } catch (dbErr) {
+            if (dbErr.message && dbErr.message.includes('UNIQUE')) {
+              return new Response(JSON.stringify({ error: "此電子郵件已存在，請使用其他郵件" }), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json', ...corsHeaders }
+              });
+            }
+            throw dbErr;
+          }
+        }
+      }
+
+      if (url.pathname.startsWith('/api/recipients/')) {
+        if (!env.DB) {
+          return new Response(JSON.stringify({ error: "Database binding DB not found" }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        const parts = url.pathname.split('/');
+        const id = parseInt(parts[parts.length - 1]);
+        if (isNaN(id)) {
+          return new Response(JSON.stringify({ error: "無效的 ID" }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        if (request.method === 'PUT') {
+          try {
+            const body = await request.json();
+            const { name, email } = body;
+            if (!name || !email) {
+              return new Response(JSON.stringify({ error: "姓名與電子郵件為必填欄位" }), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json', ...corsHeaders }
+              });
+            }
+            if (!email.includes('@')) {
+              return new Response(JSON.stringify({ error: "電子郵件格式不正確" }), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json', ...corsHeaders }
+              });
+            }
+
+            await env.DB.prepare(
+              "UPDATE recipients SET name = ?, email = ? WHERE id = ?"
+            ).bind(name.trim(), email.trim().toLowerCase(), id).run();
+
+            return new Response(JSON.stringify({ success: true }), {
+              headers: { 'Content-Type': 'application/json', ...corsHeaders }
+            });
+          } catch (dbErr) {
+            if (dbErr.message && dbErr.message.includes('UNIQUE')) {
+              return new Response(JSON.stringify({ error: "此電子郵件已存在，請使用其他郵件" }), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json', ...corsHeaders }
+              });
+            }
+            throw dbErr;
+          }
+        }
+
+        if (request.method === 'DELETE') {
+          await env.DB.prepare(
+            "DELETE FROM recipients WHERE id = ?"
+          ).bind(id).run();
+
+          return new Response(JSON.stringify({ success: true }), {
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+      }
+
       // 404 Not Found
       return new Response('Not Found', { status: 404 });
     } catch (err) {

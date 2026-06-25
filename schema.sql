@@ -15,3 +15,11 @@ CREATE TABLE IF NOT EXISTS tenders (
 
 CREATE INDEX IF NOT EXISTS idx_tenders_publish_date ON tenders(publish_date DESC);
 CREATE INDEX IF NOT EXISTS idx_tenders_budget ON tenders(budget DESC);
+
+CREATE TABLE IF NOT EXISTS recipients (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
