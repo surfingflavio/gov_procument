@@ -1,0 +1,16 @@
+name = "rfp"
+main = "src/index.js"
+compatibility_date = "2024-05-24"
+
+[triggers]
+crons = [ "0 0,10 * * *" ]  # Daily syncs (UTC 0:00 and 10:00 correspond to 8:00 AM and 6:00 PM Taiwan Time UTC+8)
+
+[[d1_databases]]
+binding = "DB"
+database_name = "RFP-db"
+database_id = "temp-id-replace-me" # Will be updated after we run D1 create
+
+[[rules]]
+type = "Text"
+globs = ["**/*.html"]
+fallthrough = true

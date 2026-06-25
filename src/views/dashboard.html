@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>招標資訊查詢系統 - RFP Dashboard</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(17, 24, 39, 0.7);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --primary: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.15);
+            --accent-green: #10b981;
+            --accent-blue: #3b82f6;
+            --accent-purple: #8b5cf6;
+            --font-display: 'Outfit', 'Inter', 'Noto Sans TC', sans-serif;
+            --font-body: 'Inter', 'Noto Sans TC', sans-serif;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.1) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            min-height: 100vh;
+            padding: 2rem 1.5rem;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* Header Style */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .logo-section h1 {
+            font-family: var(--font-display);
+            font-size: 2.25rem;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            background: linear-gradient(to right, #6366f1, #a78bfa, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo-section p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-top: 0.25rem;
+        }
+
+        /* Glassmorphism Button */
+        .btn-sync {
+            background: linear-gradient(135deg, var(--primary), var(--accent-purple));
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.95rem;
+            border-radius: 9999px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-sync::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: 0.5s;
+        }
+
+        .btn-sync:hover::before {
+            left: 100%;
+        }
+
+        .btn-sync:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
+        }
+
+        .btn-sync:active {
+            transform: translateY(1px);
+        }
+
+        .btn-sync:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: var(--transition);
+        }
+
+        .stat-card:hover {
+            border-color: rgba(99, 102, 241, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-info h3 {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-info .stat-value {
+            font-family: var(--font-display);
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-top: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .stat-icon {
+            width: 3.25rem;
+            height: 3.25rem;
+            border-radius: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .stat-total { background: rgba(99, 102, 241, 0.1); color: var(--primary); }
+        .stat-security { background: rgba(139, 92, 246, 0.1); color: var(--accent-purple); }
+        .stat-budget { background: rgba(16, 185, 129, 0.1); color: var(--accent-green); }
+        .stat-time { background: rgba(59, 130, 246, 0.1); color: var(--accent-blue); }
+
+        /* Filter Controls */
+        .controls-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 1.25rem;
+            padding: 1.25rem;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+        }
+
+        /* Chips Tab */
+        .filter-tabs {
+            display: flex;
+            gap: 0.5rem;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 0.25rem;
+            border-radius: 9999px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-chip {
+            padding: 0.5rem 1.25rem;
+            border-radius: 9999px;
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            transition: var(--transition);
+        }
+
+        .tab-chip:hover {
+            color: var(--text-primary);
+        }
+
+        .tab-chip.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);
+        }
+
+        /* Search Input */
+        .search-wrapper {
+            position: relative;
+            flex: 1;
+            max-width: 400px;
+            min-width: 250px;
+        }
+
+        .search-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--card-border);
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border-radius: 0.75rem;
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 0.9rem;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 0.875rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            font-size: 1rem;
+            pointer-events: none;
+        }
+
+        /* Main Data Display */
+        .data-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 1.5rem;
+            overflow: hidden;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+        }
+
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 1.15rem 1.5rem;
+            font-family: var(--font-display);
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--card-border);
+            cursor: pointer;
+            user-select: none;
+            transition: var(--transition);
+        }
+
+        th:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .sort-indicator {
+            margin-left: 0.35rem;
+            display: inline-block;
+            transition: transform 0.2s;
+            font-size: 0.75rem;
+            opacity: 0.5;
+        }
+
+        th.active-sort {
+            color: var(--primary);
+        }
+
+        th.active-sort .sort-indicator {
+            opacity: 1;
+        }
+
+        td {
+            padding: 1.15rem 1.5rem;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            vertical-align: middle;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr {
+            transition: var(--transition);
+        }
+
+        tr:hover td {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Specific Column Styles */
+        .td-agency {
+            font-weight: 500;
+            color: #d1d5db;
+        }
+
+        .td-title {
+            font-weight: 600;
+            max-width: 450px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .td-date {
+            font-family: var(--font-display);
+            color: var(--text-secondary);
+        }
+
+        .td-budget {
+            font-family: var(--font-display);
+            font-weight: 700;
+            color: #f3f4f6;
+        }
+
+        .badge-source {
+            display: inline-flex;
+            padding: 0.25rem 0.65rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-acebidx { background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.2); }
+        .badge-pcc { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.2); }
+
+        .btn-go {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 0.5rem;
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #d1d5db;
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .btn-go:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            transform: translateX(2px);
+        }
+
+        /* Loading & Empty State */
+        .loading-state, .empty-state {
+            padding: 4rem 2rem;
+            text-align: center;
+            color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .spinner {
+            width: 3rem;
+            height: 3rem;
+            border: 3px solid rgba(99, 102, 241, 0.1);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s infinite linear;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Spin sync icon animation */
+        .spin-icon {
+            animation: spin 1.2s infinite linear;
+        }
+
+        /* Notification Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: rgba(17, 24, 39, 0.9);
+            border: 1px solid var(--primary);
+            padding: 1rem 1.5rem;
+            border-radius: 0.75rem;
+            color: white;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            z-index: 99;
+            transform: translateY(150%);
+            opacity: 0;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* Mobile view optimizations */
+        .mobile-card-list {
+            display: none;
+            flex-direction: column;
+            gap: 1rem;
+            padding: 1.25rem;
+        }
+
+        .mobile-card {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .mobile-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+        }
+
+        .mobile-title {
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--text-primary);
+        }
+
+        .mobile-details {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 0.5rem 1rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .mobile-label {
+            font-weight: 500;
+            color: rgba(255,255,255,0.4);
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+            .controls-card {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .search-wrapper {
+                max-width: 100%;
+            }
+            table {
+                display: none;
+            }
+            .mobile-card-list {
+                display: flex;
+            }
+            .logo-section h1 {
+                font-size: 1.75rem;
+            }
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .btn-sync {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="logo-section">
+                <h1>🔍 招標資訊查詢系統</h1>
+                <p>搜尋與收集台灣「資訊」、「資安」相關的政府及民間招標公告</p>
+            </div>
+            <button id="sync-btn" class="btn-sync" onclick="triggerSync()">
+                <span id="sync-icon">🔄</span>
+                <span id="sync-text">立即同步資料</span>
+            </button>
+        </header>
+
+        <!-- Stats Section -->
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-info">
+                    <h3>標案總數</h3>
+                    <div id="stat-total-val" class="stat-value">--</div>
+                </div>
+                <div class="stat-icon stat-total">📊</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-info">
+                    <h3>資安標案數量</h3>
+                    <div id="stat-security-val" class="stat-value">--</div>
+                </div>
+                <div class="stat-icon stat-security">🛡️</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-info">
+                    <h3>最高預算金額</h3>
+                    <div id="stat-max-val" class="stat-value">--</div>
+                </div>
+                <div class="stat-icon stat-budget">💰</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-info">
+                    <h3>最後同步時間</h3>
+                    <div id="stat-time-val" class="stat-value" style="font-size: 0.95rem; margin-top: 1rem;">--</div>
+                </div>
+                <div class="stat-icon stat-time">🕒</div>
+            </div>
+        </section>
+
+        <!-- Control Bar -->
+        <section class="controls-card">
+            <!-- Filter Tabs -->
+            <div class="filter-tabs">
+                <button id="tab-all" class="tab-chip active" onclick="setFilter('all')">全部</button>
+                <button id="tab-info" class="tab-chip" onclick="setFilter('info')">資訊類</button>
+                <button id="tab-security" class="tab-chip" onclick="setFilter('security')">資安類</button>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="search-wrapper">
+                <span class="search-icon">🔍</span>
+                <input id="search-input" class="search-input" type="text" placeholder="輸入標案名稱或機關搜尋..." oninput="handleSearch()">
+            </div>
+        </section>
+
+        <!-- Data List -->
+        <main class="data-card">
+            <!-- Table View -->
+            <div class="table-responsive">
+                <table id="tenders-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 250px;">機關名稱</th>
+                            <th>標案名稱</th>
+                            <th id="th-date" class="active-sort" onclick="toggleSort('date')">
+                                公告日期 <span id="indicator-date" class="sort-indicator">▼</span>
+                            </th>
+                            <th id="th-budget" onclick="toggleSort('budget')">
+                                預算金額 <span id="indicator-budget" class="sort-indicator">↕</span>
+                            </th>
+                            <th style="width: 100px;">來源</th>
+                            <th style="width: 100px; text-align: center;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <!-- Dynamic content here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Mobile Card View -->
+            <div id="mobile-cards" class="mobile-card-list">
+                <!-- Dynamic cards here -->
+            </div>
+
+            <!-- Loader -->
+            <div id="loader" class="loading-state">
+                <div class="spinner"></div>
+                <p>資料載入中，請稍候...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="empty-state" style="display: none;">
+                <span style="font-size: 3rem;">📂</span>
+                <h3>找不到任何招標公告</h3>
+                <p>請嘗試點擊右上角的「立即同步資料」以獲取最新標案公告。</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast">
+        <span id="toast-icon">🚀</span>
+        <span id="toast-text">同步成功！</span>
+    </div>
+
+    <script>
+        let rawTenders = [];
+        let filteredTenders = [];
+        let currentFilter = 'all'; // all, info, security
+        let sortField = 'date';    // date, budget
+        let sortOrder = 'desc';    // desc, asc
+
+        // Format currency for display
+        function formatCurrency(num) {
+            if (num === 0) return '未公開或未填';
+            return 'NT$ ' + num.toLocaleString('zh-TW');
+        }
+
+        // Fetch data on page load
+        async function fetchTenders() {
+            showLoader(true);
+            try {
+                const response = await fetch('/api/tenders');
+                if (!response.ok) throw new Error('API 請求失敗');
+                rawTenders = await response.json();
+                
+                updateStatistics();
+                applyFilterAndSort();
+            } catch (err) {
+                console.error(err);
+                showToast('❌ 讀取資料失敗，請重新整理');
+            } finally {
+                showLoader(false);
+            }
+        }
+
+        // Update statistics cards
+        function updateStatistics() {
+            document.getElementById('stat-total-val').innerText = rawTenders.length;
+            
+            const securityCount = rawTenders.filter(t => 
+                t.title.includes('資安') || t.title.includes('資訊安全')
+            ).length;
+            document.getElementById('stat-security-val').innerText = securityCount;
+            
+            const maxBudget = rawTenders.reduce((max, t) => t.budget > max ? t.budget : max, 0);
+            document.getElementById('stat-max-val').innerText = maxBudget > 0 ? formatCurrency(maxBudget).replace('NT$ ', '$') : '--';
+            
+            // Find latest created_at or use current time
+            if (rawTenders.length > 0) {
+                const dates = rawTenders.map(t => new Date(t.created_at));
+                const latest = new Date(Math.max(...dates));
+                // Convert UTC time to local readable format
+                document.getElementById('stat-time-val').innerText = latest.toLocaleString('zh-TW');
+            } else {
+                document.getElementById('stat-time-val').innerText = '尚未同步';
+            }
+        }
+
+        // Apply filter, search, and sort to raw data
+        function applyFilterAndSort() {
+            const searchQuery = document.getElementById('search-input').value.toLowerCase().trim();
+            
+            // 1. Filter by tabs (all, info, security)
+            let result = [...rawTenders];
+            if (currentFilter === 'info') {
+                result = result.filter(t => t.title.includes('資訊') && !t.title.includes('資安') && !t.title.includes('資訊安全'));
+            } else if (currentFilter === 'security') {
+                result = result.filter(t => t.title.includes('資安') || t.title.includes('資訊安全'));
+            }
+
+            // 2. Search filtering
+            if (searchQuery !== '') {
+                result = result.filter(t => 
+                    t.title.toLowerCase().includes(searchQuery) || 
+                    t.agency.toLowerCase().includes(searchQuery)
+                );
+            }
+
+            // 3. Sorting
+            result.sort((a, b) => {
+                let valA = a[sortField === 'date' ? 'publish_date' : 'budget'];
+                let valB = b[sortField === 'date' ? 'publish_date' : 'budget'];
+                
+                // For date comparison
+                if (sortField === 'date') {
+                    if (valA < valB) return sortOrder === 'desc' ? 1 : -1;
+                    if (valA > valB) return sortOrder === 'desc' ? -1 : 1;
+                    return 0;
+                }
+                
+                // For budget numeric comparison
+                return sortOrder === 'desc' ? valB - valA : valA - valB;
+            });
+
+            filteredTenders = result;
+            renderData();
+        }
+
+        // Render data into table and mobile cards
+        function renderData() {
+            const tableBody = document.getElementById('table-body');
+            const mobileCards = document.getElementById('mobile-cards');
+            const emptyState = document.getElementById('empty-state');
+
+            tableBody.innerHTML = '';
+            mobileCards.innerHTML = '';
+
+            if (filteredTenders.length === 0) {
+                emptyState.style.display = 'flex';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+
+            filteredTenders.forEach(t => {
+                // Table Row
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="td-agency">${t.agency}</td>
+                    <td class="td-title" title="${t.title}">${t.title}</td>
+                    <td class="td-date">${t.publish_date}</td>
+                    <td class="td-budget">${formatCurrency(t.budget)}</td>
+                    <td><span class="badge-source badge-${t.source}">${t.source}</span></td>
+                    <td style="text-align: center;">
+                        <a href="${t.url}" target="_blank" class="btn-go">前往 ➔</a>
+                    </td>
+                `;
+                tableBody.appendChild(tr);
+
+                // Mobile Card
+                const card = document.createElement('div');
+                card.className = 'mobile-card';
+                card.innerHTML = `
+                    <div class="mobile-card-header">
+                        <div class="mobile-title">${t.title}</div>
+                        <span class="badge-source badge-${t.source}">${t.source}</span>
+                    </div>
+                    <div class="mobile-details">
+                        <div class="mobile-label">機關名稱</div>
+                        <div>${t.agency}</div>
+                        <div class="mobile-label">公告日期</div>
+                        <div>${t.publish_date}</div>
+                        <div class="mobile-label">預算金額</div>
+                        <div style="font-weight: 700;">${formatCurrency(t.budget)}</div>
+                    </div>
+                    <a href="${t.url}" target="_blank" class="btn-go" style="text-align: center; margin-top: 0.5rem;">前往標案詳情 ➔</a>
+                `;
+                mobileCards.appendChild(card);
+            });
+        }
+
+        // Tabs filtering
+        function setFilter(filterType) {
+            currentFilter = filterType;
+            
+            // Remove active classes
+            document.querySelectorAll('.tab-chip').forEach(c => c.classList.remove('active'));
+            
+            // Add active class
+            if (filterType === 'all') document.getElementById('tab-all').classList.add('active');
+            if (filterType === 'info') document.getElementById('tab-info').classList.add('active');
+            if (filterType === 'security') document.getElementById('tab-security').classList.add('active');
+            
+            applyFilterAndSort();
+        }
+
+        // Search trigger
+        function handleSearch() {
+            applyFilterAndSort();
+        }
+
+        // Sorting trigger
+        function toggleSort(field) {
+            const thDate = document.getElementById('th-date');
+            const thBudget = document.getElementById('th-budget');
+            const indicatorDate = document.getElementById('indicator-date');
+            const indicatorBudget = document.getElementById('indicator-budget');
+
+            if (sortField === field) {
+                // Toggle order
+                sortOrder = sortOrder === 'desc' ? 'asc' : 'desc';
+            } else {
+                sortField = field;
+                sortOrder = 'desc'; // default on new field is descending
+            }
+
+            // Update headers class styling
+            thDate.className = sortField === 'date' ? 'active-sort' : '';
+            thBudget.className = sortField === 'budget' ? 'active-sort' : '';
+
+            // Update indicators text
+            indicatorDate.innerText = sortField === 'date' ? (sortOrder === 'desc' ? '▼' : '▲') : '↕';
+            indicatorBudget.innerText = sortField === 'budget' ? (sortOrder === 'desc' ? '▼' : '▲') : '↕';
+
+            applyFilterAndSort();
+        }
+
+        // Sync Trigger
+        async function triggerSync() {
+            const syncBtn = document.getElementById('sync-btn');
+            const syncIcon = document.getElementById('sync-icon');
+            const syncText = document.getElementById('sync-text');
+
+            syncBtn.disabled = true;
+            syncIcon.classList.add('spin-icon');
+            syncText.innerText = '同步中，請稍候...';
+            showToast('🔄 開始同步招標公告資訊...', '🚀');
+
+            try {
+                const response = await fetch('/api/sync', { method: 'POST' });
+                if (!response.ok) throw new Error('同步失敗');
+                const result = await response.json();
+                
+                showToast(`✅ 同步完成！新增/更新了 ${result.count} 筆標案`, '🎉');
+                await fetchTenders(); // Refresh
+            } catch (err) {
+                console.error(err);
+                showToast('❌ 同步失敗，請稍後再試', '⚠️');
+            } finally {
+                syncBtn.disabled = false;
+                syncIcon.classList.remove('spin-icon');
+                syncText.innerText = '立即同步資料';
+            }
+        }
+
+        // Loader Toggle
+        function showLoader(visible) {
+            const loader = document.getElementById('loader');
+            loader.style.display = visible ? 'flex' : 'none';
+        }
+
+        // Toast Notification System
+        function showToast(message, icon = '🚀') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-text').innerText = message;
+            document.getElementById('toast-icon').innerText = icon;
+            
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 4000);
+        }
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', fetchTenders);
+    </script>
+</body>
+</html>
