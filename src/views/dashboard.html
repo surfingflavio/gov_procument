@@ -335,6 +335,7 @@
             color: var(--text-primary);
             border-bottom: 1px solid rgba(255, 255, 255, 0.03);
             vertical-align: middle;
+            white-space: nowrap;
         }
 
         tr:last-child td {
@@ -353,14 +354,17 @@
         .td-agency {
             font-weight: 500;
             color: #d1d5db;
+            max-width: 15em;
+            word-break: break-all;
+            white-space: normal;
         }
 
         .td-title {
             font-weight: 600;
-            max-width: 450px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            width: 15em;
+            min-width: 15em;
+            word-break: break-all;
+            white-space: normal;
         }
 
         .td-date {
@@ -543,7 +547,7 @@
         <header>
             <div class="logo-section">
                 <h1>🔍 招標資訊查詢系統</h1>
-                <p>搜尋與收集台灣「資訊」、「資安」相關的政府及民間招標公告</p>
+                <p>搜尋與收集台灣「資訊」、「資安」、「資通安全」相關的政府及民間招標公告</p>
             </div>
             <button id="sync-btn" class="btn-sync" onclick="triggerSync()">
                 <span id="sync-icon">🔄</span>
@@ -590,6 +594,7 @@
                 <button id="tab-all" class="tab-chip active" onclick="setFilter('all')">全部</button>
                 <button id="tab-info" class="tab-chip" onclick="setFilter('info')">資訊類</button>
                 <button id="tab-security" class="tab-chip" onclick="setFilter('security')">資安類</button>
+                <button id="tab-infosec" class="tab-chip" onclick="setFilter('infosec')">資通安全</button>
             </div>
 
             <!-- Search Bar -->
@@ -606,11 +611,13 @@
                 <table id="tenders-table">
                     <thead>
                         <tr>
-                            <th style="width: 250px;">機關名稱</th>
+                            <th style="width: 200px;">機關名稱</th>
                             <th>標案名稱</th>
+                            <th>標案案號</th>
                             <th id="th-date" class="active-sort" onclick="toggleSort('date')">
                                 公告日期 <span id="indicator-date" class="sort-indicator">▼</span>
                             </th>
+                            <th>截止投標日期</th>
                             <th id="th-budget" onclick="toggleSort('budget')">
                                 預算金額 <span id="indicator-budget" class="sort-indicator">↕</span>
                             </th>
@@ -686,7 +693,7 @@
             document.getElementById('stat-total-val').innerText = rawTenders.length;
             
             const securityCount = rawTenders.filter(t => 
-                t.title.includes('資安') || t.title.includes('資訊安全')
+                t.title.includes('資安') || t.title.includes('資訊安全') || t.title.includes('資通安全')
             ).length;
             document.getElementById('stat-security-val').innerText = securityCount;
             
@@ -695,10 +702,10 @@
             
             // Find latest created_at or use current time
             if (rawTenders.length > 0) {
-                const dates = rawTenders.map(t => new Date(t.created_at));
+                const dates = rawTenders.map(t => new Date(t.created_at.replace(' ', 'T') + 'Z'));
                 const latest = new Date(Math.max(...dates));
-                // Convert UTC time to local readable format
-                document.getElementById('stat-time-val').innerText = latest.toLocaleString('zh-TW');
+                // Convert UTC time to Taiwan readable format
+                document.getElementById('stat-time-val').innerText = latest.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' });
             } else {
                 document.getElementById('stat-time-val').innerText = '尚未同步';
             }
@@ -708,12 +715,14 @@
         function applyFilterAndSort() {
             const searchQuery = document.getElementById('search-input').value.toLowerCase().trim();
             
-            // 1. Filter by tabs (all, info, security)
+            // 1. Filter by tabs (all, info, security, infosec)
             let result = [...rawTenders];
             if (currentFilter === 'info') {
-                result = result.filter(t => t.title.includes('資訊') && !t.title.includes('資安') && !t.title.includes('資訊安全'));
+                result = result.filter(t => t.title.includes('資訊') && !t.title.includes('資安') && !t.title.includes('資訊安全') && !t.title.includes('資通安全'));
             } else if (currentFilter === 'security') {
-                result = result.filter(t => t.title.includes('資安') || t.title.includes('資訊安全'));
+                result = result.filter(t => (t.title.includes('資安') || t.title.includes('資訊安全')) && !t.title.includes('資通安全'));
+            } else if (currentFilter === 'infosec') {
+                result = result.filter(t => t.title.includes('資通安全'));
             }
 
             // 2. Search filtering
@@ -766,7 +775,9 @@
                 tr.innerHTML = `
                     <td class="td-agency">${t.agency}</td>
                     <td class="td-title" title="${t.title}">${t.title}</td>
+                    <td class="td-case-number" style="font-family: var(--font-display); color: var(--text-secondary);">${t.case_number || '-'}</td>
                     <td class="td-date">${t.publish_date}</td>
+                    <td class="td-date">${t.end_date || '-'}</td>
                     <td class="td-budget">${formatCurrency(t.budget)}</td>
                     <td><span class="badge-source badge-${t.source}">${t.source}</span></td>
                     <td style="text-align: center;">
@@ -786,8 +797,12 @@
                     <div class="mobile-details">
                         <div class="mobile-label">機關名稱</div>
                         <div>${t.agency}</div>
+                        <div class="mobile-label">標案案號</div>
+                        <div>${t.case_number || '-'}</div>
                         <div class="mobile-label">公告日期</div>
                         <div>${t.publish_date}</div>
+                        <div class="mobile-label">截止投標</div>
+                        <div>${t.end_date || '-'}</div>
                         <div class="mobile-label">預算金額</div>
                         <div style="font-weight: 700;">${formatCurrency(t.budget)}</div>
                     </div>
@@ -805,9 +820,10 @@
             document.querySelectorAll('.tab-chip').forEach(c => c.classList.remove('active'));
             
             // Add active class
-            if (filterType === 'all') document.getElementById('tab-all').classList.add('active');
-            if (filterType === 'info') document.getElementById('tab-info').classList.add('active');
-            if (filterType === 'security') document.getElementById('tab-security').classList.add('active');
+            const activeTab = document.getElementById('tab-' + filterType);
+            if (activeTab) {
+                activeTab.classList.add('active');
+            }
             
             applyFilterAndSort();
         }

@@ -91,6 +91,37 @@ function extractBudget(html) {
   return { budget: 0, text: "未公開或未填" };
 }
 
+// Extract bidding case number from detail page HTML
+function extractCaseNumber(html) {
+  const match = html.match(/案號：\s*([^|&<"\s]+)/);
+  if (match) {
+    return match[1].trim();
+  }
+  return "";
+}
+
+// Extract bidding deadline date from detail page HTML and normalize to YYYY-MM-DD HH:mm
+function extractEndDate(html) {
+  const idx = html.indexOf('截止投標');
+  if (idx !== -1) {
+    const sub = html.substring(idx, idx + 2000);
+    const match = sub.match(/(\d{2,4})[\/\.-](\d{1,2})[\/\.-](\d{1,2})(?:\s+(\d{1,2}):(\d{1,2}))?/);
+    if (match) {
+      const year = match[1];
+      const month = match[2].padStart(2, '0');
+      const day = match[3].padStart(2, '0');
+      const time = match[4] && match[5] ? ` ${match[4].padStart(2, '0')}:${match[5].padStart(2, '0')}` : '';
+      
+      let gYear = parseInt(year, 10);
+      if (gYear < 1000) {
+        gYear += 1911;
+      }
+      return `${gYear}-${month}-${day}${time}`;
+    }
+  }
+  return "";
+}
+
 // Scrape tenders from acebidx.com
 async function scrapeAcebidx(keyword) {
   const tenders = [];
@@ -137,6 +168,8 @@ async function scrapeAcebidx(keyword) {
       
       let budget = 0;
       let budgetText = "未公開或未填";
+      let caseNumber = "";
+      let endDate = "";
       
       try {
         // Fetch specific details
@@ -150,6 +183,8 @@ async function scrapeAcebidx(keyword) {
           const parsedBudget = extractBudget(detailHtml);
           budget = parsedBudget.budget;
           budgetText = parsedBudget.text;
+          caseNumber = extractCaseNumber(detailHtml);
+          endDate = extractEndDate(detailHtml);
         }
       } catch (err) {
         console.error(`Error fetching detail page ${detailUrl}:`, err.message);
@@ -158,9 +193,11 @@ async function scrapeAcebidx(keyword) {
       tenders.push({
         uid,
         source: "acebidx",
+        case_number: caseNumber,
         agency: item.agency,
         title: item.title,
         publish_date: parseTaiwanDate(item.dateText),
+        end_date: endDate,
         budget,
         budget_text: budgetText,
         url: detailUrl
@@ -230,7 +267,7 @@ async function scrapePcc(keyword) {
 
 // Synchronize all tenders into Cloudflare D1 Database
 export async function syncTenders(db) {
-  const keywords = ["資訊", "資安"];
+  const keywords = ["資訊", "資安", "資通安全"];
   let totalSaved = 0;
   
   for (const keyword of keywords) {
@@ -247,20 +284,24 @@ export async function syncTenders(db) {
     for (const tender of combined) {
       try {
         const result = await db.prepare(`
-          INSERT INTO tenders (uid, source, agency, title, publish_date, budget, budget_text, url)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO tenders (uid, source, case_number, agency, title, publish_date, end_date, budget, budget_text, url)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           ON CONFLICT(uid) DO UPDATE SET
+            case_number = excluded.case_number,
             agency = excluded.agency,
             title = excluded.title,
             publish_date = excluded.publish_date,
+            end_date = excluded.end_date,
             budget = excluded.budget,
             budget_text = excluded.budget_text
         `).bind(
           tender.uid,
           tender.source,
+          tender.case_number,
           tender.agency,
           tender.title,
           tender.publish_date,
+          tender.end_date,
           tender.budget,
           tender.budget_text,
           tender.url

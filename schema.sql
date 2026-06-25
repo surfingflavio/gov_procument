@@ -2,9 +2,11 @@ CREATE TABLE IF NOT EXISTS tenders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     uid TEXT UNIQUE,             -- Unique ID (e.g. source + "_" + source_id or md5)
     source TEXT,                 -- Source of data (acebidx / pcc)
+    case_number TEXT,            -- Case Number (標案案號)
     agency TEXT,                 -- Agency Name (機關名稱)
     title TEXT,                  -- Bidding Title (標案名稱)
     publish_date TEXT,           -- Announcement Date (YYYY-MM-DD for sorting)
+    end_date TEXT,               -- Deadline Date (截止投標日期)
     budget INTEGER,              -- Budget amount as number for sorting (0 if secret/unannounced)
     budget_text TEXT,            -- Formatted budget amount (e.g., "19,800,000元")
     url TEXT,                    -- Announcement URL
