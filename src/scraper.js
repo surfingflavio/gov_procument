@@ -265,10 +265,136 @@ async function scrapePcc(keyword) {
   }
 }
 
+// Helper to escape HTML characters in email body
+function escapeHtml(str) {
+  if (!str) return "";
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+// Send email notifications to all registered recipients via MailChannels API
+async function sendEmailNotification(recipients, newTenders) {
+  const sendEmailURL = 'https://api.mailchannels.net/tx/v1/send';
+
+  // Build HTML list of new tenders
+  let tenderRowsHtml = '';
+  for (const t of newTenders) {
+    tenderRowsHtml += `
+      <tr>
+        <td style="padding: 10px; border-bottom: 1px solid #eeeeee;">${escapeHtml(t.agency)}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eeeeee; font-weight: bold; color: #111827;">${escapeHtml(t.title)}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eeeeee; font-family: monospace;">${escapeHtml(t.case_number) || '-'}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eeeeee;">${escapeHtml(t.publish_date)}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eeeeee;">${escapeHtml(t.end_date) || '-'}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eeeeee; font-weight: bold; color: #4f46e5;">${escapeHtml(t.budget_text) || '未公開'}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eeeeee; text-align: center;">
+          <a href="${t.url}" target="_blank" style="display: inline-block; padding: 5px 12px; background-color: #4f46e5; color: white; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: 600;">前往 ➔</a>
+        </td>
+      </tr>
+    `;
+  }
+
+  const htmlBody = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f2937; line-height: 1.6; margin: 0; padding: 20px; background-color: #f3f4f6;">
+      <div style="max-width: 800px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); border: 1px solid #e5e7eb;">
+        <h2 style="color: #4f46e5; margin-top: 0; font-size: 20px; border-bottom: 2px solid #f3f4f6; padding-bottom: 15px;">
+          🍊 雲力橘子_招標資訊分析 - 新增標案通知
+        </h2>
+        <p style="font-size: 15px; color: #4b5563;">您好，系統剛才執行了資料同步，為您篩選出以下 <strong>${newTenders.length}</strong> 筆全新的「資訊」、「資安」或「資通安全」相關招標公告：</p>
+        
+        <div style="overflow-x: auto; margin: 20px 0; border: 1px solid #e5e7eb; border-radius: 8px;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; min-width: 600px;">
+            <thead>
+              <tr style="background-color: #f9fafb; color: #4b5563;">
+                <th style="padding: 10px; border-bottom: 2px solid #e5e7eb;">機關名稱</th>
+                <th style="padding: 10px; border-bottom: 2px solid #e5e7eb;">標案名稱</th>
+                <th style="padding: 10px; border-bottom: 2px solid #e5e7eb;">標案案號</th>
+                <th style="padding: 10px; border-bottom: 2px solid #e5e7eb;">公告日期</th>
+                <th style="padding: 10px; border-bottom: 2px solid #e5e7eb;">截止投標</th>
+                <th style="padding: 10px; border-bottom: 2px solid #e5e7eb;">預算金額</th>
+                <th style="padding: 10px; border-bottom: 2px solid #e5e7eb; text-align: center;">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tenderRowsHtml}
+            </tbody>
+          </table>
+        </div>
+        
+        <p style="font-size: 12px; color: #9ca3af; margin-top: 30px; border-top: 1px solid #f3f4f6; padding-top: 15px; text-align: center;">
+          此郵件為系統自動發送，請勿直接回覆。如有任何疑問，請造訪系統網站。
+        </p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  // Build standard personalizations to-list for MailChannels
+  const toList = recipients.map(r => ({
+    email: r.email,
+    name: r.name
+  }));
+
+  const payload = {
+    personalizations: [
+      {
+        to: toList
+      }
+    ],
+    from: {
+      email: 'flaviochang@gamania.com',
+      name: '雲力橘子_招標資訊分析系統'
+    },
+    subject: `【雲力橘子】新增標案通知 (${newTenders.length} 筆新資料)`,
+    content: [
+      {
+        type: 'text/html',
+        value: htmlBody
+      }
+    ]
+  };
+
+  const res = await fetch(sendEmailURL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`MailChannels returned status ${res.status}: ${errText}`);
+  }
+
+  console.log(`Notification email sent successfully to ${toList.length} recipients.`);
+}
+
 // Synchronize all tenders into Cloudflare D1 Database
 export async function syncTenders(db) {
   const keywords = ["資訊", "資安", "資通安全"];
   let totalSaved = 0;
+  const newTenders = [];
+
+  // Query existing UIDs from database to detect new ones
+  let existingUids = new Set();
+  try {
+    const { results } = await db.prepare("SELECT uid FROM tenders").all();
+    if (results) {
+      existingUids = new Set(results.map(r => r.uid));
+    }
+  } catch (err) {
+    console.error("Error fetching existing UIDs for duplicate check:", err);
+  }
   
   for (const keyword of keywords) {
     // 1. Scrape from Taiwan Bidding & Procurement Network (acebidx)
@@ -280,8 +406,9 @@ export async function syncTenders(db) {
     // Combine lists
     const combined = [...acebidxTenders, ...pccTenders];
     
-    // 3. Save to database using INSERT OR IGNORE
+    // 3. Save to database using INSERT OR IGNORE / ON CONFLICT UPDATE
     for (const tender of combined) {
+      const isNew = !existingUids.has(tender.uid);
       try {
         const result = await db.prepare(`
           INSERT INTO tenders (uid, source, case_number, agency, title, publish_date, end_date, budget, budget_text, url)
@@ -309,6 +436,9 @@ export async function syncTenders(db) {
         
         if (result.meta?.changes > 0) {
           totalSaved++;
+          if (isNew) {
+            newTenders.push(tender);
+          }
         }
       } catch (err) {
         console.error(`Error saving tender to D1: ${err.message}`);
@@ -316,6 +446,22 @@ export async function syncTenders(db) {
     }
   }
   
-  console.log(`Synchronization finished. Saved/Updated ${totalSaved} biddings.`);
-  return { success: true, count: totalSaved };
+  console.log(`Synchronization finished. Saved/Updated ${totalSaved} biddings. New: ${newTenders.length}`);
+
+  // Send email if there are new biddings
+  if (newTenders.length > 0) {
+    try {
+      const { results: recipients } = await db.prepare("SELECT name, email FROM recipients").all();
+      if (recipients && recipients.length > 0) {
+        console.log(`Sending email notifications to ${recipients.length} recipients...`);
+        await sendEmailNotification(recipients, newTenders);
+      } else {
+        console.log("No recipients found in database. Skipping email notification.");
+      }
+    } catch (emailErr) {
+      console.error("Failed to send email notifications:", emailErr);
+    }
+  }
+  
+  return { success: true, count: totalSaved, newCount: newTenders.length };
 }
