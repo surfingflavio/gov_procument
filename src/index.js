@@ -60,13 +60,53 @@ export default {
 
         console.log("Manual sync triggered via POST /api/sync");
         // Run sync process
-        const result = await syncTenders(env.DB);
+        const result = await syncTenders(env.DB, env);
         
         return new Response(JSON.stringify(result), {
           headers: {
             'Content-Type': 'application/json',
             ...corsHeaders
           },
+        });
+      }
+
+      // Temp API: Test sending email
+      if (url.pathname === '/api/test-email') {
+        const apiKey = env.RESEND_API_KEY;
+        if (!apiKey) {
+          return new Response(JSON.stringify({ error: "RESEND_API_KEY is not configured. Please use 'wrangler secret put RESEND_API_KEY' to set it." }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        const fromEmail = env.FROM_EMAIL || 'onboarding@resend.dev';
+        const fromName = '雲力橘子_招標資訊分析系統';
+
+        const res = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            from: `${fromName} <${fromEmail}>`,
+            to: ['flaviochang@gamania.com'],
+            subject: '專案進度週報',
+            html: '您好，目前系統的 GitHub 自動化部署已經測試完畢，功能一切正常。'
+          })
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          return new Response(JSON.stringify({ error: `Resend error: ${errText}` }), {
+            status: res.status,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
       }
 
@@ -207,6 +247,6 @@ export default {
     }
     
     // We run the scraper asynchronously under Workers execution context
-    ctx.waitUntil(syncTenders(env.DB));
+    ctx.waitUntil(syncTenders(env.DB, env));
   }
 };
