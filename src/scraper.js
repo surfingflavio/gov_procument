@@ -371,7 +371,7 @@ async function sendEmailNotification(recipients, newTenders, env) {
   }
 
   const toEmails = recipients.map(r => r.email);
-  const fromEmail = env.FROM_EMAIL || 'flaviochang@gamania.com';
+  const fromEmail = env.FROM_EMAIL || 'surfingflavio@gmail.com';
   const fromName = '雲力橘子_招標資訊分析系統';
 
   const subjectText = isNoUpdate 

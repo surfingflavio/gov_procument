@@ -92,16 +92,17 @@ export default {
           "SELECT email FROM recipients"
         ).all();
 
+        const queryTo = url.searchParams.get('to');
         let toEmails = [];
-        if (dbRecipients && dbRecipients.length > 0) {
+        if (queryTo) {
+          toEmails = [queryTo];
+        } else if (dbRecipients && dbRecipients.length > 0) {
           toEmails = dbRecipients.map(r => r.email);
         } else {
-          // Fallback to query parameter or default
-          const queryTo = url.searchParams.get('to');
-          toEmails = [queryTo || 'flaviochang@gamania.com'];
+          toEmails = ['flaviochang@gamania.com'];
         }
 
-        const fromEmail = env.FROM_EMAIL || 'onboarding@resend.dev';
+        const fromEmail = env.FROM_EMAIL || 'surfingflavio@gmail.com';
         const fromName = '雲力橘子_招標資訊分析系統';
 
         const subject = url.searchParams.get('subject') || '專案進度週報';
