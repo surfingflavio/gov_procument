@@ -80,6 +80,9 @@ export default {
           });
         }
 
+        const queryTo = url.searchParams.get('to');
+        const targetEmail = queryTo || 'flaviochang@gamania.com';
+
         const fromEmail = env.FROM_EMAIL || 'onboarding@resend.dev';
         const fromName = '雲力橘子_招標資訊分析系統';
 
@@ -91,7 +94,7 @@ export default {
           },
           body: JSON.stringify({
             from: `${fromName} <${fromEmail}>`,
-            to: ['flaviochang@gamania.com'],
+            to: [targetEmail],
             subject: '專案進度週報',
             html: '您好，目前系統的 GitHub 自動化部署已經測試完畢，功能一切正常。'
           })
