@@ -80,11 +80,32 @@ export default {
           });
         }
 
-        const queryTo = url.searchParams.get('to');
-        const targetEmail = queryTo || 'flaviochang@gamania.com';
+        if (!env.DB) {
+          return new Response(JSON.stringify({ error: "Database binding DB not found" }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        // Query all recipients from DB
+        const { results: dbRecipients } = await env.DB.prepare(
+          "SELECT email FROM recipients"
+        ).all();
+
+        let toEmails = [];
+        if (dbRecipients && dbRecipients.length > 0) {
+          toEmails = dbRecipients.map(r => r.email);
+        } else {
+          // Fallback to query parameter or default
+          const queryTo = url.searchParams.get('to');
+          toEmails = [queryTo || 'flaviochang@gamania.com'];
+        }
 
         const fromEmail = env.FROM_EMAIL || 'onboarding@resend.dev';
         const fromName = '雲力橘子_招標資訊分析系統';
+
+        const subject = url.searchParams.get('subject') || '專案進度週報';
+        const bodyText = url.searchParams.get('body') || '這是測試信';
 
         const res = await fetch('https://api.resend.com/emails', {
           method: 'POST',
@@ -94,9 +115,9 @@ export default {
           },
           body: JSON.stringify({
             from: `${fromName} <${fromEmail}>`,
-            to: [targetEmail],
-            subject: '專案進度週報',
-            html: '您好，目前系統的 GitHub 自動化部署已經測試完畢，功能一切正常。'
+            to: toEmails,
+            subject: subject,
+            html: bodyText
           })
         });
 
@@ -108,7 +129,7 @@ export default {
           });
         }
 
-        return new Response(JSON.stringify({ success: true }), {
+        return new Response(JSON.stringify({ success: true, recipients: toEmails }), {
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
       }
