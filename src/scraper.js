@@ -265,6 +265,295 @@ async function scrapePcc(keyword) {
   }
 }
 
+// Global session cookie for taiwanbuying
+let taiwanBuyingCookie = "";
+
+// Login to taiwanbuying.com.tw and retrieve session cookies
+async function loginTaiwanBuying(env) {
+  const username = env?.TAIWANBUYING_USER || "flaviochang@gamania.com";
+  const password = env?.TAIWANBUYING_PASS || "Julie520";
+  const loginUrl = "https://www.taiwanbuying.com.tw/MemShowLogin.asp";
+  const actionUrl = "https://www.taiwanbuying.com.tw/MemLoginAction.asp";
+  
+  console.log("Logging in to taiwanbuying.com.tw with account:", username);
+  
+  try {
+    const initRes = await fetch(loginUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      }
+    });
+    
+    if (!initRes.ok) {
+      console.error(`Failed to load login page. Status: ${initRes.status}`);
+      return "";
+    }
+    
+    const html = await initRes.text();
+    const csrfMatch = html.match(/name="csrf_token"\s+value="([^"]+)"/);
+    if (!csrfMatch) {
+      console.error("Failed to parse csrf_token from login page");
+      return "";
+    }
+    const csrfToken = csrfMatch[1];
+    
+    const setCookies = initRes.headers.getSetCookie ? initRes.headers.getSetCookie() : (initRes.headers.get("set-cookie") ? [initRes.headers.get("set-cookie")] : []);
+    let cookieHeader = setCookies.map(c => c.split(';')[0]).join('; ');
+    
+    const bodyParams = new URLSearchParams();
+    bodyParams.append("csrf_token", csrfToken);
+    bodyParams.append("LogID", username);
+    bodyParams.append("PWD", password);
+    bodyParams.append("Submit", "送出");
+    
+    const loginRes = await fetch(actionUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Cookie": cookieHeader
+      },
+      body: bodyParams.toString(),
+      redirect: "manual"
+    });
+    
+    const loginSetCookies = loginRes.headers.getSetCookie ? loginRes.headers.getSetCookie() : (loginRes.headers.get("set-cookie") ? [loginRes.headers.get("set-cookie")] : []);
+    if (loginSetCookies.length > 0) {
+      const newCookies = loginSetCookies.map(c => c.split(';')[0]).join('; ');
+      cookieHeader = [cookieHeader, newCookies].filter(Boolean).join('; ');
+    }
+    
+    console.log("Login to taiwanbuying.com.tw completed.");
+    return cookieHeader;
+  } catch (error) {
+    console.error("Error during login to taiwanbuying.com.tw:", error.message);
+    return "";
+  }
+}
+
+// Fetch detail page from taiwanbuying, following redirects, preserving cookies
+async function fetchTaiwanBuyingDetail(recNo, cookieHeader) {
+  let url = `https://www.taiwanbuying.com.tw/ShowDetail.ASP?RecNo=${recNo}`;
+  let depth = 0;
+  
+  while (depth < 5) {
+    try {
+      const res = await fetch(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Cookie": cookieHeader
+        },
+        redirect: "manual"
+      });
+      
+      const setCookies = res.headers.getSetCookie ? res.headers.getSetCookie() : (res.headers.get("set-cookie") ? [res.headers.get("set-cookie")] : []);
+      if (setCookies.length > 0) {
+        const newCookies = setCookies.map(c => c.split(';')[0]).join('; ');
+        cookieHeader = [cookieHeader, newCookies].filter(Boolean).join('; ');
+      }
+      
+      if (res.status === 302 || res.status === 301) {
+        let location = res.headers.get("location");
+        if (!location) {
+          break;
+        }
+        if (!location.startsWith("http")) {
+          const parsed = new URL(url);
+          location = `${parsed.protocol}//${parsed.host}/${location.startsWith('/') ? location.slice(1) : location}`;
+        }
+        url = location;
+        depth++;
+      } else if (res.ok) {
+        const body = await res.text();
+        return { body, cookies: cookieHeader };
+      } else {
+        console.error(`Failed to fetch detail for RecNo ${recNo}. Status: ${res.status}`);
+        break;
+      }
+    } catch (err) {
+      console.error(`Error fetching detail for RecNo ${recNo}:`, err.message);
+      break;
+    }
+  }
+  return null;
+}
+
+// Parse ROC/standard date with optional time for deadline
+function parseDeadlineDate(dateStr) {
+  if (!dateStr) return "";
+  dateStr = cleanText(dateStr).trim();
+  if (dateStr.includes("加值會員專用")) return "";
+
+  const timeMatch = dateStr.match(/(\d{1,2}):(\d{1,2})/);
+  const timeStr = timeMatch ? ` ${timeMatch[1].padStart(2, '0')}:${timeMatch[2].padStart(2, '0')}` : '';
+
+  const rocMatch = dateStr.match(/(?:民國)?\s*(\d+)\s*年\s*(\d+)\s*月\s*(\d+)\s*日/);
+  if (rocMatch) {
+    const year = parseInt(rocMatch[1], 10) + 1911;
+    const month = rocMatch[2].padStart(2, '0');
+    const day = rocMatch[3].padStart(2, '0');
+    return `${year}-${month}-${day}${timeStr}`;
+  }
+
+  const ymdMatch = dateStr.match(/(\d{4})[-\/\.](\d{1,2})[-\/\.](\d{1,2})/);
+  if (ymdMatch) {
+    const year = ymdMatch[1];
+    const month = ymdMatch[2].padStart(2, '0');
+    const day = ymdMatch[3].padStart(2, '0');
+    return `${year}-${month}-${day}${timeStr}`;
+  }
+
+  return dateStr;
+}
+
+// Parse budget text from detail page
+function parseBudget(budgetStr) {
+  if (!budgetStr) return { budget: 0, text: "未公開或未填" };
+  budgetStr = budgetStr.replace(/<[^>]+>/g, '').trim();
+  if (budgetStr.includes("加值會員專用") || budgetStr.includes("未公開") || budgetStr.includes("未填")) {
+    return { budget: 0, text: "未公開或未填" };
+  }
+
+  const numMatch = budgetStr.match(/([\d,]+)/);
+  if (numMatch) {
+    const budgetVal = parseInt(numMatch[1].replace(/,/g, ''), 10);
+    if (!isNaN(budgetVal)) {
+      return {
+        budget: budgetVal,
+        text: budgetVal.toLocaleString('zh-TW') + "元"
+      };
+    }
+  }
+
+  return { budget: 0, text: budgetStr };
+}
+
+// Scrape tenders from taiwanbuying.com.tw
+async function scrapeTaiwanBuying(keyword, env) {
+  const tenders = [];
+  const url = `https://www.taiwanbuying.com.tw/Query_KeywordAction.ASP?Keyword=${encodeURIComponent(keyword)}`;
+  
+  console.log(`Scraping taiwanbuying.com.tw for keyword: "${keyword}"...`);
+  
+  if (!taiwanBuyingCookie) {
+    taiwanBuyingCookie = await loginTaiwanBuying(env);
+  }
+  
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      }
+    });
+    
+    if (!response.ok) {
+      console.error(`TaiwanBuying returned status ${response.status}`);
+      return [];
+    }
+    
+    const html = await response.text();
+    const regex = /href=javascript:openWin\('ShowDetail\.ASP\?RecNo=(\d+)'\)(?:\s+title='([^']*)')?>([\s\S]*?)<\/a>/gi;
+    let match;
+    const matches = [];
+    
+    while ((match = regex.exec(html)) !== null) {
+      matches.push({
+        recNo: match[1],
+        titleAttr: match[2] || '',
+        textContent: match[3].replace(/<[^>]+>/g, '').trim()
+      });
+    }
+    
+    console.log(`Found ${matches.length} matches on taiwanbuying list for "${keyword}"`);
+    
+    // Fetch details for first 15 biddings to prevent timeout
+    const listToFetch = matches.slice(0, 15);
+    
+    for (const item of listToFetch) {
+      const recNo = item.recNo;
+      const textContent = item.textContent;
+      
+      const colonIdx = textContent.indexOf(':');
+      let agency = '';
+      let fullTitle = textContent;
+      
+      if (colonIdx !== -1) {
+        agency = textContent.substring(0, colonIdx).trim();
+        fullTitle = textContent.substring(colonIdx + 1).trim();
+      }
+      
+      const parenMatch = fullTitle.match(/\s*\(([^)]+)\)$/);
+      let dateText = '';
+      let title = fullTitle;
+      
+      if (parenMatch) {
+        dateText = parenMatch[1].replace(/更新/g, '').trim();
+        title = fullTitle.substring(0, parenMatch.index).trim();
+      }
+      
+      const publishDate = parseTaiwanDate(dateText);
+      const detailUrl = `https://www.taiwanbuying.com.tw/ShowDetail.ASP?RecNo=${recNo}`;
+      const uid = `taiwanbuying_${recNo}`;
+      
+      let caseNumber = "";
+      let endDate = "";
+      let budget = 0;
+      let budgetText = "未公開或未填";
+      
+      if (taiwanBuyingCookie) {
+        const detailResult = await fetchTaiwanBuyingDetail(recNo, taiwanBuyingCookie);
+        if (detailResult) {
+          taiwanBuyingCookie = detailResult.cookies;
+          const detailHtml = detailResult.body;
+          
+          // Parse Case Number
+          const caseNoMatch = detailHtml.match(/<b>公告單位案號<\/b>\s*:\s*([\s\S]*?)<br>/);
+          if (caseNoMatch) {
+            const parsedCaseNo = caseNoMatch[1].replace(/<[^>]+>/g, '').trim();
+            if (!parsedCaseNo.includes("加值會員專用")) {
+              caseNumber = parsedCaseNo;
+            }
+          }
+          
+          // Parse End Date
+          const deadlineMatch = detailHtml.match(/<b>截止收件日期<\/b>\s*:\s*([\s\S]*?)<br>/);
+          if (deadlineMatch) {
+            const parsedDeadline = deadlineMatch[1].replace(/<[^>]+>/g, '').trim();
+            endDate = parseDeadlineDate(parsedDeadline);
+          }
+          
+          // Parse Budget
+          const budgetMatch = detailHtml.match(/<b>預算或預估採購金額<\/b>\s*:\s*([\s\S]*?)<br>/);
+          if (budgetMatch) {
+            const parsedBudget = parseBudget(budgetMatch[1]);
+            budget = parsedBudget.budget;
+            budgetText = parsedBudget.text;
+          }
+        }
+      }
+      
+      tenders.push({
+        uid,
+        source: "taiwanbuying",
+        case_number: caseNumber,
+        agency,
+        title,
+        publish_date: publishDate,
+        end_date: endDate,
+        budget,
+        budget_text: budgetText,
+        url: detailUrl
+      });
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  } catch (error) {
+    console.error(`Error scraping taiwanbuying for "${keyword}":`, error.message);
+  }
+  
+  return tenders;
+}
+
 // Helper to escape HTML characters in email body
 function escapeHtml(str) {
   if (!str) return "";
@@ -424,8 +713,11 @@ export async function syncTenders(db, env) {
     // 2. Try scraping official PCC site
     const pccTenders = await scrapePcc(keyword);
     
+    // 3. Scrape from taiwanbuying.com.tw
+    const taiwanBuyingTenders = await scrapeTaiwanBuying(keyword, env);
+    
     // Combine lists
-    const combined = [...acebidxTenders, ...pccTenders];
+    const combined = [...acebidxTenders, ...pccTenders, ...taiwanBuyingTenders];
     
     // 3. Save to database using INSERT OR IGNORE / ON CONFLICT UPDATE
     for (const tender of combined) {
@@ -435,13 +727,14 @@ export async function syncTenders(db, env) {
           INSERT INTO tenders (uid, source, case_number, agency, title, publish_date, end_date, budget, budget_text, url)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           ON CONFLICT(uid) DO UPDATE SET
-            case_number = excluded.case_number,
-            agency = excluded.agency,
-            title = excluded.title,
-            publish_date = excluded.publish_date,
-            end_date = excluded.end_date,
-            budget = excluded.budget,
-            budget_text = excluded.budget_text
+            case_number = CASE WHEN tenders.is_edited = 1 THEN tenders.case_number ELSE excluded.case_number END,
+            agency = CASE WHEN tenders.is_edited = 1 THEN tenders.agency ELSE excluded.agency END,
+            title = CASE WHEN tenders.is_edited = 1 THEN tenders.title ELSE excluded.title END,
+            publish_date = CASE WHEN tenders.is_edited = 1 THEN tenders.publish_date ELSE excluded.publish_date END,
+            end_date = CASE WHEN tenders.is_edited = 1 THEN tenders.end_date ELSE excluded.end_date END,
+            budget = CASE WHEN tenders.is_edited = 1 THEN tenders.budget ELSE excluded.budget END,
+            budget_text = CASE WHEN tenders.is_edited = 1 THEN tenders.budget_text ELSE excluded.budget_text END,
+            url = CASE WHEN tenders.is_edited = 1 THEN tenders.url ELSE excluded.url END
         `).bind(
           tender.uid,
           tender.source,
@@ -482,5 +775,5 @@ export async function syncTenders(db, env) {
     console.error("Failed to send email notifications:", emailErr);
   }
   
-  return { success: true, count: totalSaved, newCount: newTenders.length };
+  return { success: true, count: totalSaved, newCount: newTenders.length, syncTime: new Date().toISOString() };
 }

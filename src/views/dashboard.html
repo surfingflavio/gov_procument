@@ -298,9 +298,9 @@
 
         th {
             background: rgba(255, 255, 255, 0.02);
-            padding: 1.15rem 1.5rem;
+            padding: 0.75rem 0.8rem;
             font-family: var(--font-display);
-            font-size: 0.875rem;
+            font-size: 0.8rem;
             font-weight: 600;
             color: var(--text-secondary);
             border-bottom: 1px solid var(--card-border);
@@ -331,8 +331,8 @@
         }
 
         td {
-            padding: 1.15rem 1.5rem;
-            font-size: 0.95rem;
+            padding: 0.75rem 0.8rem;
+            font-size: 0.85rem;
             color: var(--text-primary);
             border-bottom: 1px solid rgba(0, 0, 0, 0.05);
             vertical-align: middle;
@@ -355,17 +355,52 @@
         .td-agency {
             font-weight: 500;
             color: var(--text-primary);
-            max-width: 15em;
+            min-width: 10.5em;
+            max-width: 12em;
             word-break: break-all;
             white-space: normal;
         }
 
         .td-title {
             font-weight: 600;
-            width: 15em;
-            min-width: 15em;
+            min-width: 12em;
+            max-width: 18em;
             word-break: break-all;
             white-space: normal;
+        }
+
+        .td-title-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 0.5rem;
+            width: 100%;
+        }
+
+        .btn-pcc-search {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            background: rgba(79, 70, 229, 0.06);
+            color: var(--primary);
+            border: 1px solid rgba(79, 70, 229, 0.15);
+            padding: 0.2rem 0.4rem;
+            font-size: 0.72rem;
+            font-weight: 600;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-left: 0.5rem;
+            flex-shrink: 0;
+            vertical-align: middle;
+            font-family: var(--font-body);
+        }
+
+        .btn-pcc-search:hover {
+            background: var(--primary);
+            color: #ffffff;
+            border-color: var(--primary);
+            transform: translateY(-1px);
         }
 
         .td-date {
@@ -390,6 +425,7 @@
 
         .badge-acebidx { background: rgba(99, 102, 241, 0.1); color: #4f46e5; border: 1px solid rgba(99, 102, 241, 0.15); }
         .badge-pcc { background: rgba(16, 185, 129, 0.1); color: #059669; border: 1px solid rgba(16, 185, 129, 0.15); }
+        .badge-taiwanbuying { background: rgba(249, 115, 22, 0.1); color: #f97316; border: 1px solid rgba(249, 115, 22, 0.15); }
 
         .btn-go {
             display: inline-flex;
@@ -795,6 +831,82 @@
                 justify-content: center;
             }
         }
+
+        /* Notes Column Styles */
+        .notes-cell {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            min-height: 2em;
+            display: block;
+            border-radius: 4px;
+            padding: 4px;
+            transition: background-color 0.2s;
+            word-break: break-all;
+            white-space: normal;
+        }
+        .notes-cell:hover {
+            background-color: rgba(99, 102, 241, 0.05);
+        }
+        .notes-placeholder {
+            color: rgba(0, 0, 0, 0.25);
+            font-style: italic;
+        }
+        .notes-textarea {
+            width: 100%;
+            border: 1px solid var(--primary);
+            border-radius: 4px;
+            padding: 4px;
+            font-family: inherit;
+            font-size: 0.85rem;
+            resize: vertical;
+            outline: none;
+            box-sizing: border-box;
+        }
+        .notes-link {
+            color: #4f46e5;
+            text-decoration: underline;
+            font-weight: 500;
+        }
+        
+        /* Management Button Styles */
+        .management-actions {
+            display: inline-flex;
+            gap: 0.35rem;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+        }
+        .btn-action {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 4px 6px;
+            border-radius: 4px;
+            transition: background-color 0.2s, opacity 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-action:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+        .btn-pin {
+            color: #f59e0b;
+        }
+        .btn-pin.unpinned {
+            opacity: 0.35;
+        }
+        .btn-pin.unpinned:hover {
+            opacity: 0.7;
+        }
+        .btn-edit {
+            color: #3b82f6;
+        }
+        .btn-remove {
+            color: #ef4444;
+        }
     </style>
 </head>
 <body>
@@ -803,9 +915,12 @@
         <header>
             <div class="logo-section">
                 <h1>🔍 雲力橘子_招標資訊分析</h1>
-                <p>搜尋與收集台灣「資訊」、「資安」、「資通安全」相關的政府及民間招標公告</p>
+                <p>搜尋與收集台灣「資訊」、「資安」、「資通安全」相關的政府招標公告</p>
             </div>
             <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;" class="header-action-group">
+                <span id="sync-time-wrapper" style="font-size: 0.95rem; color: var(--text-secondary); margin-right: 0.5rem; white-space: nowrap;">
+                    最後同步時間 <strong id="stat-time-val" style="color: var(--text-primary); font-weight: 600;">--</strong>
+                </span>
                 <button id="sync-btn" class="btn-sync" onclick="triggerSync()">
                     <span id="sync-icon">🔄</span>
                     <span id="sync-text">立即同步資料</span>
@@ -816,38 +931,6 @@
                 </button>
             </div>
         </header>
-
-        <!-- Stats Section -->
-        <section class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-info">
-                    <h3>標案總數</h3>
-                    <div id="stat-total-val" class="stat-value">--</div>
-                </div>
-                <div class="stat-icon stat-total">📊</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-info">
-                    <h3>資安標案數量</h3>
-                    <div id="stat-security-val" class="stat-value">--</div>
-                </div>
-                <div class="stat-icon stat-security">🛡️</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-info">
-                    <h3>最高預算金額</h3>
-                    <div id="stat-max-val" class="stat-value">--</div>
-                </div>
-                <div class="stat-icon stat-budget">💰</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-info">
-                    <h3>最後同步時間</h3>
-                    <div id="stat-time-val" class="stat-value" style="font-size: 0.95rem; margin-top: 1rem;">--</div>
-                </div>
-                <div class="stat-icon stat-time">🕒</div>
-            </div>
-        </section>
 
         <!-- Control Bar -->
         <section class="controls-card">
@@ -873,7 +956,7 @@
                 <table id="tenders-table">
                     <thead>
                         <tr>
-                            <th style="width: 200px;">機關名稱</th>
+                            <th style="min-width: 10.5em; width: 10.5em;">機關名稱</th>
                             <th>標案名稱</th>
                             <th>標案案號</th>
                             <th id="th-date" class="active-sort" onclick="toggleSort('date')">
@@ -883,8 +966,9 @@
                             <th id="th-budget" onclick="toggleSort('budget')">
                                 預算金額 <span id="indicator-budget" class="sort-indicator">↕</span>
                             </th>
-                            <th style="width: 100px;">來源</th>
-                            <th style="width: 100px; text-align: center;">操作</th>
+                            <th style="width: 90px; text-align: center;">來源</th>
+                            <th style="width: 105px; text-align: center;">管理</th>
+                            <th>備註</th>
                         </tr>
                     </thead>
                     <tbody id="table-body">
@@ -960,6 +1044,50 @@
         </div>
     </div>
 
+    <!-- Edit Tender Modal -->
+    <div id="edit-tender-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 550px;">
+            <div class="modal-header" style="flex-direction: column; align-items: flex-start; gap: 0.25rem; background: #f9fafb;">
+                <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                    <h2 id="edit-modal-agency" style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin: 0; word-break: break-all; text-align: left; display: flex; align-items: center; gap: 0.5rem;"></h2>
+                    <button type="button" class="btn-close" onclick="closeEditTenderModal()" style="margin-top: -0.5rem; margin-left: auto;">&times;</button>
+                </div>
+                <div id="edit-modal-title" style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4; word-break: break-all; width: 100%; text-align: left; font-weight: 500;"></div>
+            </div>
+            <div class="modal-body">
+                <form id="edit-tender-form" onsubmit="handleEditTenderSubmit(event)">
+                    <input type="hidden" id="edit-t-uids">
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label for="edit-t-case-number">標案案號</label>
+                        <input type="text" id="edit-t-case-number" placeholder="例如：1150624001">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label for="edit-t-publish-date">公告日期</label>
+                        <input type="text" id="edit-t-publish-date" required placeholder="例如：2026-06-30">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label for="edit-t-end-date">截止投標日期</label>
+                        <input type="text" id="edit-t-end-date" placeholder="例如：2026-07-06 17:30">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label for="edit-t-budget">預算金額 (元)</label>
+                        <input type="number" id="edit-t-budget" min="0" placeholder="例如：12000000">
+                    </div>
+                    
+                    <!-- Container for dynamic source URL inputs -->
+                    <div id="edit-t-urls-container" style="margin-top: 1rem;">
+                        <!-- Dynamic URL input fields will be injected here -->
+                    </div>
+
+                    <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem; justify-content: flex-end;">
+                        <button type="button" class="btn-cancel" onclick="closeEditTenderModal()">取消</button>
+                        <button type="submit" class="btn-submit">儲存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Notification Toast -->
     <div id="toast" class="toast">
         <span id="toast-icon">🚀</span>
@@ -997,35 +1125,139 @@
             }
         }
 
-        // Update statistics cards
+        // Helper to convert plain text urls to clickable links
+        function linkify(text) {
+            if (!text) return "";
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            return text.replace(urlRegex, function(url) {
+                return `<a href="${url}" target="_blank" class="notes-link">${url} 🔗</a>`;
+            });
+        }
+
+        // Inline edit notes logic
+        function startEditNotes(event, cell, idx) {
+            if (event.target.tagName === 'A' || event.target.tagName === 'TEXTAREA') return;
+            
+            const tender = filteredTenders[idx];
+            const currentNotes = tender.notes || '';
+            
+            const textarea = document.createElement('textarea');
+            textarea.className = 'notes-textarea';
+            textarea.value = currentNotes;
+            textarea.rows = 2;
+            
+            cell.innerHTML = '';
+            cell.appendChild(textarea);
+            textarea.focus();
+            
+            textarea.onblur = async function() {
+                const newNotes = textarea.value.trim();
+                cell.innerHTML = newNotes ? linkify(newNotes) : '<span class="notes-placeholder">點擊輸入備註...</span>';
+                
+                // Update reference
+                tender.notes = newNotes;
+                
+                if (newNotes !== currentNotes) {
+                    await saveTenderUpdate({
+                        uids: tender.uids,
+                        notes: newNotes
+                    });
+                }
+            };
+            
+            textarea.onkeydown = function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    textarea.blur();
+                }
+            };
+        }
+
+        // Update statistics and tab counts
         function updateStatistics() {
-            document.getElementById('stat-total-val').innerText = rawTenders.length;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            // Get active, unexpired tenders
+            const activeTenders = rawTenders.filter(t => {
+                if (t.is_removed === 1) return false;
+                if (t.end_date) {
+                    const end = new Date(t.end_date.replace(/-/g, '/'));
+                    if (end < today) return false;
+                }
+                return true;
+            });
+
+            // Count unique groups
+            function getMergedCountForFilter(filterFn) {
+                const filtered = filterFn ? activeTenders.filter(filterFn) : activeTenders;
+                const keys = new Set();
+                for (const t of filtered) {
+                    keys.add(`${t.agency}::${t.title}`);
+                }
+                return keys.size;
+            }
+
+            const allCount = getMergedCountForFilter(null);
             
-            const securityCount = rawTenders.filter(t => 
-                t.title.includes('資安') || t.title.includes('資訊安全') || t.title.includes('資通安全')
-            ).length;
-            document.getElementById('stat-security-val').innerText = securityCount;
+            const infoCount = getMergedCountForFilter(t => 
+                t.title.includes('資訊') && !t.title.includes('資安') && !t.title.includes('資訊安全') && !t.title.includes('資通安全')
+            );
             
-            const maxBudget = rawTenders.reduce((max, t) => t.budget > max ? t.budget : max, 0);
-            document.getElementById('stat-max-val').innerText = maxBudget > 0 ? formatCurrency(maxBudget).replace('NT$ ', '$') : '--';
+            const securityCount = getMergedCountForFilter(t => 
+                (t.title.includes('資安') || t.title.includes('資訊安全')) && !t.title.includes('資通安全')
+            );
             
-            // Find latest created_at or use current time
+            const infosecCount = getMergedCountForFilter(t => 
+                t.title.includes('資通安全')
+            );
+
+            // Update Tab button texts with counts
+            document.getElementById('tab-all').innerText = `全部 (${allCount})`;
+            document.getElementById('tab-info').innerText = `資訊類 (${infoCount})`;
+            document.getElementById('tab-security').innerText = `資安類 (${securityCount})`;
+            document.getElementById('tab-infosec').innerText = `資通安全 (${infosecCount})`;
+            
+            // Find latest created_at from database
+            let lastSync = null;
             if (rawTenders.length > 0) {
                 const dates = rawTenders.map(t => new Date(t.created_at.replace(' ', 'T') + 'Z'));
-                const latest = new Date(Math.max(...dates));
-                // Convert UTC time to Taiwan readable format
-                document.getElementById('stat-time-val').innerText = latest.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' });
+                lastSync = new Date(Math.max(...dates));
+            }
+            
+            // Compare with localStorage lastSyncTime
+            const localSyncStr = localStorage.getItem('lastSyncTime');
+            if (localSyncStr) {
+                const localSync = new Date(localSyncStr);
+                if (!lastSync || localSync > lastSync) {
+                    lastSync = localSync;
+                }
+            }
+            
+            if (lastSync) {
+                document.getElementById('stat-time-val').innerText = lastSync.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' });
             } else {
                 document.getElementById('stat-time-val').innerText = '尚未同步';
             }
         }
 
-        // Apply filter, search, and sort to raw data
+        // Apply filter, search, sort, and duplicate merge to raw data
         function applyFilterAndSort() {
             const searchQuery = document.getElementById('search-input').value.toLowerCase().trim();
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
             
-            // 1. Filter by tabs (all, info, security, infosec)
-            let result = [...rawTenders];
+            // 1. Filter out removed and expired tenders
+            let result = rawTenders.filter(t => {
+                if (t.is_removed === 1) return false;
+                if (t.end_date) {
+                    const end = new Date(t.end_date.replace(/-/g, '/'));
+                    if (end < today) return false;
+                }
+                return true;
+            });
+            
+            // 2. Filter by tab category
             if (currentFilter === 'info') {
                 result = result.filter(t => t.title.includes('資訊') && !t.title.includes('資安') && !t.title.includes('資訊安全') && !t.title.includes('資通安全'));
             } else if (currentFilter === 'security') {
@@ -1033,32 +1265,118 @@
             } else if (currentFilter === 'infosec') {
                 result = result.filter(t => t.title.includes('資通安全'));
             }
-
-            // 2. Search filtering
-            if (searchQuery !== '') {
+            
+            // 3. Search query filter
+            if (searchQuery) {
                 result = result.filter(t => 
                     t.title.toLowerCase().includes(searchQuery) || 
                     t.agency.toLowerCase().includes(searchQuery)
                 );
             }
-
-            // 3. Sorting
-            result.sort((a, b) => {
-                let valA = a[sortField === 'date' ? 'publish_date' : 'budget'];
-                let valB = b[sortField === 'date' ? 'publish_date' : 'budget'];
+            
+            // 4. Merge duplicate rows (identical agency and title)
+            const groups = {};
+            for (const t of result) {
+                const key = `${t.agency}::${t.title}`;
+                if (!groups[key]) {
+                    groups[key] = [];
+                }
+                groups[key].push(t);
+            }
+            
+            const mergedResult = [];
+            for (const key in groups) {
+                const group = groups[key];
                 
-                // For date comparison
-                if (sortField === 'date') {
-                    if (valA < valB) return sortOrder === 'desc' ? 1 : -1;
-                    if (valA > valB) return sortOrder === 'desc' ? -1 : 1;
-                    return 0;
+                // Sort group items so that the primary (pinned or newest or higher budget) is chosen
+                group.sort((a, b) => {
+                    if (a.is_pinned !== b.is_pinned) return b.is_pinned - a.is_pinned;
+                    if (a.publish_date !== b.publish_date) return b.publish_date.localeCompare(a.publish_date);
+                    return b.budget - a.budget;
+                });
+                
+                const primary = group[0];
+                
+                // Combine sources
+                const sources = group.map(t => ({
+                    source: t.source,
+                    url: t.url,
+                    uid: t.uid
+                }));
+                
+                // Take first non-empty case number
+                let case_number = "";
+                for (const t of group) {
+                    if (t.case_number) {
+                        case_number = t.case_number;
+                        break;
+                    }
                 }
                 
-                // For budget numeric comparison
-                return sortOrder === 'desc' ? valB - valA : valA - valB;
+                // Take latest end date
+                let end_date = "";
+                for (const t of group) {
+                    if (t.end_date && (!end_date || t.end_date > end_date)) {
+                        end_date = t.end_date;
+                    }
+                }
+                
+                // Take max budget
+                const maxBudget = Math.max(...group.map(t => t.budget || 0));
+                const budget_text = maxBudget > 0 ? maxBudget.toLocaleString('zh-TW') + "元" : "未公開或未填";
+                
+                // Pinned if any in the group is pinned
+                const is_pinned = group.some(t => t.is_pinned === 1) ? 1 : 0;
+                
+                // Take first non-empty notes
+                let notes = "";
+                for (const t of group) {
+                    if (t.notes) {
+                        notes = t.notes;
+                        break;
+                    }
+                }
+                
+                mergedResult.push({
+                    uids: group.map(t => t.uid),
+                    agency: primary.agency,
+                    title: primary.title,
+                    case_number,
+                    publish_date: primary.publish_date,
+                    end_date,
+                    budget: maxBudget,
+                    budget_text,
+                    is_pinned,
+                    notes,
+                    sources
+                });
+            }
+            
+            // 5. Sort the final merged biddings list
+            mergedResult.sort((a, b) => {
+                // Pinned always goes first
+                if (a.is_pinned !== b.is_pinned) {
+                    return b.is_pinned - a.is_pinned;
+                }
+                
+                // If both are pinned, order by publish date descending
+                if (a.is_pinned === 1) {
+                    return b.publish_date.localeCompare(a.publish_date);
+                }
+                
+                // Regular sorting
+                if (sortField === 'date') {
+                    const cmp = a.publish_date.localeCompare(b.publish_date);
+                    return sortOrder === 'desc' ? -cmp : cmp;
+                } else if (sortField === 'budget') {
+                    const valA = a.budget || 0;
+                    const valB = b.budget || 0;
+                    return sortOrder === 'desc' ? valB - valA : valA - valB;
+                }
+                return 0;
             });
-
-            filteredTenders = result;
+            
+            filteredTenders = mergedResult;
             renderData();
         }
 
@@ -1078,19 +1396,46 @@
 
             emptyState.style.display = 'none';
 
-            filteredTenders.forEach(t => {
-                // Table Row
+            filteredTenders.forEach((t, idx) => {
+                // Sources badges HTML (Vertical Stack)
+                let sourceBadgesHtml = '<div style="display: flex; flex-direction: column; gap: 0.25rem; align-items: center;">';
+                t.sources.forEach(s => {
+                    sourceBadgesHtml += `<a href="${s.url}" target="_blank" style="text-decoration: none;"><span class="badge-source badge-${s.source}" style="cursor: pointer; display: inline-flex; align-items: center; gap: 0.15rem; width: 85px; justify-content: center;">${s.source} ➔</span></a>`;
+                });
+                sourceBadgesHtml += '</div>';
+
+                // Desktop Table Row
                 const tr = document.createElement('tr');
+                if (t.is_pinned === 1) {
+                    tr.style.backgroundColor = 'rgba(245, 158, 11, 0.03)';
+                }
+                const agencyPrefix = t.is_pinned === 1 ? '<span style="color: #f59e0b; margin-right: 0.25rem;">★</span>' : '';
                 tr.innerHTML = `
-                    <td class="td-agency">${t.agency}</td>
-                    <td class="td-title" title="${t.title}">${t.title}</td>
+                    <td class="td-agency">${agencyPrefix}${t.agency}</td>
+                    <td class="td-title" title="${t.title}" style="position: relative;">
+                        <div class="td-title-content">
+                            <span>${t.title}</span>
+                            <button class="btn-pcc-search" onclick="searchPCC(${idx})" title="前往政府採購網搜尋">
+                                🔍 採購網
+                            </button>
+                        </div>
+                    </td>
                     <td class="td-case-number" style="font-family: var(--font-display); color: var(--text-secondary);">${t.case_number || '-'}</td>
                     <td class="td-date">${t.publish_date}</td>
                     <td class="td-date">${t.end_date || '-'}</td>
                     <td class="td-budget">${formatCurrency(t.budget)}</td>
-                    <td><span class="badge-source badge-${t.source}">${t.source}</span></td>
-                    <td style="text-align: center;">
-                        <a href="${t.url}" target="_blank" class="btn-go">前往 ➔</a>
+                    <td style="text-align: center; vertical-align: middle;">${sourceBadgesHtml}</td>
+                    <td style="text-align: center; vertical-align: middle;">
+                        <div class="management-actions">
+                            <button class="btn-action ${t.is_pinned === 1 ? 'btn-pin' : 'btn-pin unpinned'}" onclick="togglePin(${idx})" title="${t.is_pinned === 1 ? '取消置頂' : '置頂'}">${t.is_pinned === 1 ? '📍' : '📌'}</button>
+                            <button class="btn-action btn-edit" onclick="openEditTenderModal(${idx})" title="編輯">✏️</button>
+                            <button class="btn-action btn-remove" onclick="removeTender(${idx})" title="移除">🗑️</button>
+                        </div>
+                    </td>
+                    <td style="vertical-align: middle;">
+                        <div class="notes-cell" onclick="startEditNotes(event, this, ${idx})">
+                            ${t.notes ? linkify(t.notes) : '<span class="notes-placeholder">點擊輸入備註...</span>'}
+                        </div>
                     </td>
                 `;
                 tableBody.appendChild(tr);
@@ -1098,14 +1443,25 @@
                 // Mobile Card
                 const card = document.createElement('div');
                 card.className = 'mobile-card';
+                if (t.is_pinned === 1) {
+                    card.style.borderLeft = '4px solid #f59e0b';
+                    card.style.background = 'rgba(245, 158, 11, 0.03)';
+                }
                 card.innerHTML = `
                     <div class="mobile-card-header">
-                        <div class="mobile-title">${t.title}</div>
-                        <span class="badge-source badge-${t.source}">${t.source}</span>
+                        <div class="mobile-title" style="display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start; width: 100%;">
+                            <span>${t.title}</span>
+                            <button class="btn-pcc-search" onclick="searchPCC(${idx})" title="前往政府採購網搜尋" style="margin-left: 0;">
+                                🔍 採購網
+                            </button>
+                        </div>
+                        <div style="display: flex; gap: 0.25rem; align-items: center; flex-wrap: wrap;">
+                            ${sourceBadgesHtml}
+                        </div>
                     </div>
                     <div class="mobile-details">
                         <div class="mobile-label">機關名稱</div>
-                        <div>${t.agency}</div>
+                        <div>${agencyPrefix}${t.agency}</div>
                         <div class="mobile-label">標案案號</div>
                         <div>${t.case_number || '-'}</div>
                         <div class="mobile-label">公告日期</div>
@@ -1114,8 +1470,18 @@
                         <div>${t.end_date || '-'}</div>
                         <div class="mobile-label">預算金額</div>
                         <div style="font-weight: 700;">${formatCurrency(t.budget)}</div>
+                        <div class="mobile-label">備註</div>
+                        <div>
+                            <div class="notes-cell" onclick="startEditNotes(event, this, ${idx})">
+                                ${t.notes ? linkify(t.notes) : '<span class="notes-placeholder">點擊輸入備註...</span>'}
+                            </div>
+                        </div>
                     </div>
-                    <a href="${t.url}" target="_blank" class="btn-go" style="text-align: center; margin-top: 0.5rem;">前往標案詳情 ➔</a>
+                    <div style="display: flex; justify-content: flex-end; gap: 0.5rem; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 0.75rem; margin-top: 0.25rem;">
+                        <button class="btn-action ${t.is_pinned === 1 ? 'btn-pin' : 'btn-pin unpinned'}" onclick="togglePin(${idx})" title="${t.is_pinned === 1 ? '取消置頂' : '置頂'}">${t.is_pinned === 1 ? '📍' : '📌'}</button>
+                        <button class="btn-action btn-edit" onclick="openEditTenderModal(${idx})" title="編輯">✏️</button>
+                        <button class="btn-action btn-remove" onclick="removeTender(${idx})" title="移除">🗑️</button>
+                    </div>
                 `;
                 mobileCards.appendChild(card);
             });
@@ -1183,6 +1549,13 @@
                 const response = await fetch('/api/sync', { method: 'POST' });
                 if (!response.ok) throw new Error('同步失敗');
                 const result = await response.json();
+                
+                // Save sync time to localStorage
+                if (result.syncTime) {
+                    localStorage.setItem('lastSyncTime', result.syncTime);
+                } else {
+                    localStorage.setItem('lastSyncTime', new Date().toISOString());
+                }
                 
                 if (result.newCount && result.newCount > 0) {
                     showToast(`✅ 同步完成！新增了 ${result.newCount} 筆新標案，已發送郵件通知`, '🎉');
@@ -1351,6 +1724,131 @@
                 console.error(err);
                 showToast('❌ 刪除收件人失敗', '⚠️');
             }
+        }
+
+        // API calls for tenders management
+        async function saveTenderUpdate(payload) {
+            try {
+                const response = await fetch('/api/tenders/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) throw new Error('更新失敗');
+                
+                // Update local dataset and UI
+                await fetchTenders();
+                showToast('💾 儲存成功！', '👍');
+            } catch (err) {
+                console.error(err);
+                showToast('❌ 儲存失敗，請重試', '⚠️');
+            }
+        }
+
+        async function togglePin(idx) {
+            const t = filteredTenders[idx];
+            const isPinned = t.is_pinned === 1 ? 0 : 1;
+            await saveTenderUpdate({ uids: t.uids, is_pinned: isPinned });
+        }
+
+        async function removeTender(idx) {
+            const t = filteredTenders[idx];
+            if (confirm('是否確定移除此標案？確認後將不再顯示在清單列表中。')) {
+                await saveTenderUpdate({ uids: t.uids, is_removed: 1 });
+            }
+        }
+
+        function openEditTenderModal(idx) {
+            const tender = filteredTenders[idx];
+            
+            // Set modal dynamic header (Agency on line 1, Title on line 2)
+            document.getElementById('edit-modal-agency').innerText = `✏️ ${tender.agency}`;
+            document.getElementById('edit-modal-title').innerText = tender.title;
+
+            document.getElementById('edit-t-uids').value = JSON.stringify(tender.uids);
+            document.getElementById('edit-t-case-number').value = tender.case_number || '';
+            document.getElementById('edit-t-publish-date').value = tender.publish_date || '';
+            document.getElementById('edit-t-end-date').value = tender.end_date || '';
+            document.getElementById('edit-t-budget').value = tender.budget || '';
+            
+            // Build source URL inputs
+            const container = document.getElementById('edit-t-urls-container');
+            container.innerHTML = '<h3 style="font-size: 1rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.75rem; border-bottom: 1px solid var(--card-border); padding-bottom: 0.25rem;">修改來源連結</h3>';
+            
+            tender.sources.forEach(s => {
+                const div = document.createElement('div');
+                div.className = 'form-group';
+                div.style.marginBottom = '1rem';
+                div.innerHTML = `
+                    <label for="edit-url-${s.uid}">${s.source} 連結網址</label>
+                    <input type="url" id="edit-url-${s.uid}" value="${s.url}" style="width: 100%;" required>
+                `;
+                container.appendChild(div);
+            });
+            
+            document.getElementById('edit-tender-modal').classList.add('open');
+        }
+
+        function closeEditTenderModal() {
+            document.getElementById('edit-tender-modal').classList.remove('open');
+        }
+
+        async function handleEditTenderSubmit(event) {
+            event.preventDefault();
+            const uids = JSON.parse(document.getElementById('edit-t-uids').value);
+            const case_number = document.getElementById('edit-t-case-number').value.trim();
+            const publish_date = document.getElementById('edit-t-publish-date').value.trim();
+            const end_date = document.getElementById('edit-t-end-date').value.trim();
+            const budgetVal = document.getElementById('edit-t-budget').value;
+            const budget = budgetVal ? parseInt(budgetVal, 10) : 0;
+            
+            const urls = {};
+            uids.forEach(uid => {
+                const input = document.getElementById(`edit-url-${uid}`);
+                if (input) {
+                    urls[uid] = input.value.trim();
+                }
+            });
+            
+            closeEditTenderModal();
+            
+            await saveTenderUpdate({
+                uids,
+                case_number,
+                publish_date,
+                end_date,
+                budget,
+                urls
+            });
+        }
+
+        // POST query search to Government Procurement website
+        function searchPCC(idx) {
+            const tender = filteredTenders[idx];
+            
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'https://web.pcc.gov.tw/prkms/tender/common/basic/readTenderBasic';
+            form.target = '_blank';
+            
+            const inputs = {
+                'tenderName': tender.title,
+                'firstSearch': 'true',
+                'searchType': 'basic',
+                'pageSize': '15'
+            };
+            
+            for (const [key, value] of Object.entries(inputs)) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = value;
+                form.appendChild(input);
+            }
+            
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);
         }
 
         // Initialize on load

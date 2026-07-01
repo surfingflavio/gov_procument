@@ -2,6 +2,10 @@ name = "dgc_procu"
 main = "src/index.js"
 compatibility_date = "2024-05-24"
 
+[vars]
+TAIWANBUYING_USER = "flaviochang@gamania.com"
+TAIWANBUYING_PASS = "Julie520"
+
 [triggers]
 crons = [ "0 1 * * 1-5" ]  # Monday to Friday at 9:00 AM Taiwan Time (1:00 AM UTC)
 

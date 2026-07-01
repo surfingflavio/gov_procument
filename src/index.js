@@ -252,6 +252,88 @@ export default {
         }
       }
 
+      // 5. API: Update Tender details (pin, remove, edit, notes)
+      if (url.pathname === '/api/tenders/update' && request.method === 'POST') {
+        if (!env.DB) {
+          return new Response(JSON.stringify({ error: "Database binding DB not found" }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        const body = await request.json();
+        const { uids, case_number, publish_date, end_date, budget, budget_text, urls, is_pinned, is_removed, notes } = body;
+
+        if (!uids || !Array.isArray(uids) || uids.length === 0) {
+          return new Response(JSON.stringify({ error: "Missing uids" }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        const statements = [];
+
+        for (const uid of uids) {
+          const updates = [];
+          const values = [];
+
+          if (case_number !== undefined) {
+            updates.push("case_number = ?");
+            values.push(case_number);
+          }
+          if (publish_date !== undefined) {
+            updates.push("publish_date = ?");
+            values.push(publish_date);
+          }
+          if (end_date !== undefined) {
+            updates.push("end_date = ?");
+            values.push(end_date);
+          }
+          if (budget !== undefined) {
+            updates.push("budget = ?");
+            values.push(budget);
+            updates.push("budget_text = ?");
+            values.push(budget_text || (budget > 0 ? budget.toLocaleString('zh-TW') + "元" : "未公開或未填"));
+          }
+          if (urls && urls[uid] !== undefined) {
+            updates.push("url = ?");
+            values.push(urls[uid]);
+          }
+          if (is_pinned !== undefined) {
+            updates.push("is_pinned = ?");
+            values.push(is_pinned);
+          }
+          if (is_removed !== undefined) {
+            updates.push("is_removed = ?");
+            values.push(is_removed);
+          }
+          if (notes !== undefined) {
+            updates.push("notes = ?");
+            values.push(notes);
+          }
+
+          const detailsEdited = (case_number !== undefined || publish_date !== undefined || end_date !== undefined || budget !== undefined || (urls && urls[uid] !== undefined));
+          if (detailsEdited) {
+            updates.push("is_edited = 1");
+          }
+
+          if (updates.length > 0) {
+            values.push(uid);
+            statements.push(
+              env.DB.prepare(`UPDATE tenders SET ${updates.join(', ')} WHERE uid = ?`).bind(...values)
+            );
+          }
+        }
+
+        if (statements.length > 0) {
+          await env.DB.batch(statements);
+        }
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
       // 404 Not Found
       return new Response('Not Found', { status: 404 });
     } catch (err) {
