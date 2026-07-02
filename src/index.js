@@ -1,6 +1,74 @@
-// src/index.js
+// src/index.js (admin console active)
 import htmlContent from './views/dashboard.html';
+import adminHtmlContent from './views/admin.html';
 import { syncTenders } from './scraper.js';
+
+// Web Crypto Session Helpers
+const fallbackSecret = "dgc-procu-secret-key-111111";
+
+async function signToken(payload, secret) {
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(secret || fallbackSecret);
+  const key = await crypto.subtle.importKey(
+    'raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(payload));
+  const base64Sig = btoa(String.fromCharCode(...new Uint8Array(signature)))
+    .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  return btoa(payload).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_') + '.' + base64Sig;
+}
+
+async function verifyToken(token, secret) {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 2) return null;
+    
+    // Decode base64url to base64
+    const base64Payload = parts[0].replace(/-/g, '+').replace(/_/g, '/');
+    const payload = atob(base64Payload);
+    const signatureStr = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(secret || fallbackSecret);
+    const key = await crypto.subtle.importKey(
+      'raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']
+    );
+    
+    const sigBinary = atob(signatureStr);
+    const sigBytes = new Uint8Array(sigBinary.length);
+    for (let i = 0; i < sigBinary.length; i++) {
+      sigBytes[i] = sigBinary.charCodeAt(i);
+    }
+    
+    const isValid = await crypto.subtle.verify('HMAC', key, sigBytes, encoder.encode(payload));
+    if (!isValid) return null;
+    
+    const data = JSON.parse(payload);
+    if (data.exp && Date.now() > data.exp) return null;
+    return data;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Cookie Helper
+function getCookie(request, name) {
+  const cookieHeader = request.headers.get('Cookie');
+  if (!cookieHeader) return null;
+  const cookies = cookieHeader.split(';');
+  for (let cookie of cookies) {
+    const [key, val] = cookie.trim().split('=');
+    if (key === name) return val;
+  }
+  return null;
+}
+
+// Authentication check middleware
+async function getCurrentUser(request, env) {
+  const token = getCookie(request, 'session');
+  if (!token) return null;
+  return await verifyToken(token, env.JWT_SECRET);
+}
 
 export default {
   async fetch(request, env, ctx) {
@@ -9,7 +77,7 @@ export default {
     // CORS Headers for API endpoints
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, PUT, DELETE',
       'Access-Control-Allow-Headers': 'Content-Type',
     };
 
@@ -22,6 +90,15 @@ export default {
       // 1. Frontend Homepage UI
       if (url.pathname === '/' || url.pathname === '/index.html') {
         return new Response(htmlContent, {
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+          },
+        });
+      }
+
+      // 1b. Frontend Admin UI
+      if (url.pathname === '/admin' || url.pathname === '/admin.html') {
+        return new Response(adminHtmlContent, {
           headers: {
             'Content-Type': 'text/html; charset=utf-8',
           },
@@ -332,6 +409,260 @@ export default {
         if (statements.length > 0) {
           await env.DB.batch(statements);
         }
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      // ==========================================
+      // AUTHENTICATION & USER MANAGEMENT API
+      // ==========================================
+
+      // 6. POST /api/auth/login
+      if (url.pathname === '/api/auth/login' && request.method === 'POST') {
+        if (!env.DB) {
+          return new Response(JSON.stringify({ error: "Database binding DB not found" }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        const { email, password } = await request.json();
+        if (!email || !password) {
+          return new Response(JSON.stringify({ error: "請輸入帳號與密碼" }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        // Query database for user
+        const user = await env.DB.prepare(
+          "SELECT * FROM users WHERE email = ?"
+        ).bind(email.trim().toLowerCase()).first();
+
+        if (!user || user.password !== password) {
+          return new Response(JSON.stringify({ error: "帳號或密碼錯誤" }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        // Generate session token
+        const payload = JSON.stringify({
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          role: user.role,
+          exp: Date.now() + 24 * 60 * 60 * 1000 // 1 day
+        });
+
+        const token = await signToken(payload, env.JWT_SECRET);
+
+        return new Response(JSON.stringify({
+          success: true,
+          user: { email: user.email, username: user.username, role: user.role }
+        }), {
+          headers: {
+            'Content-Type': 'application/json',
+            'Set-Cookie': `session=${token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=86400`,
+            ...corsHeaders
+          }
+        });
+      }
+
+      // 7. POST /api/auth/logout
+      if (url.pathname === '/api/auth/logout' && request.method === 'POST') {
+        return new Response(JSON.stringify({ success: true }), {
+          headers: {
+            'Content-Type': 'application/json',
+            'Set-Cookie': 'session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0',
+            ...corsHeaders
+          }
+        });
+      }
+
+      // 8. GET /api/auth/me
+      if (url.pathname === '/api/auth/me' && request.method === 'GET') {
+        const user = await getCurrentUser(request, env);
+        if (!user) {
+          return new Response(JSON.stringify({ authenticated: false }), {
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+        return new Response(JSON.stringify({
+          authenticated: true,
+          user: { email: user.email, username: user.username, role: user.role }
+        }), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      // 9. GET /api/users (Admin only)
+      if (url.pathname === '/api/users' && request.method === 'GET') {
+        const currentUser = await getCurrentUser(request, env);
+        if (!currentUser || currentUser.role !== 'admin') {
+          return new Response(JSON.stringify({ error: "權限不足，必須是管理者" }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        const { results } = await env.DB.prepare(
+          "SELECT id, email, username, role, created_at FROM users ORDER BY id ASC"
+        ).all();
+
+        return new Response(JSON.stringify(results), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      // 10. POST /api/users (Admin only)
+      if (url.pathname === '/api/users' && request.method === 'POST') {
+        const currentUser = await getCurrentUser(request, env);
+        if (!currentUser || currentUser.role !== 'admin') {
+          return new Response(JSON.stringify({ error: "權限不足，必須是管理者" }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        const { email, username, password, role } = await request.json();
+        if (!email || !username || !password || !role) {
+          return new Response(JSON.stringify({ error: "所有欄位皆為必填項目" }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        if (!email.includes('@')) {
+          return new Response(JSON.stringify({ error: "電子郵件格式不正確" }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        try {
+          await env.DB.prepare(
+            "INSERT INTO users (email, username, password, role) VALUES (?, ?, ?, ?)"
+          ).bind(email.trim().toLowerCase(), username.trim(), password, role).run();
+
+          return new Response(JSON.stringify({ success: true }), {
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        } catch (dbErr) {
+          if (dbErr.message && dbErr.message.includes('UNIQUE')) {
+            return new Response(JSON.stringify({ error: "該電子郵件已被註冊" }), {
+              status: 400,
+              headers: { 'Content-Type': 'application/json', ...corsHeaders }
+            });
+          }
+          throw dbErr;
+        }
+      }
+
+      // 11. PUT /api/users/:id (Admin only)
+      if (url.pathname.startsWith('/api/users/') && request.method === 'PUT') {
+        const currentUser = await getCurrentUser(request, env);
+        if (!currentUser || currentUser.role !== 'admin') {
+          return new Response(JSON.stringify({ error: "權限不足，必須是管理者" }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        const parts = url.pathname.split('/');
+        const id = parseInt(parts[parts.length - 1]);
+        if (isNaN(id)) {
+          return new Response(JSON.stringify({ error: "無效的 ID" }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        const { email, username, password, role } = await request.json();
+        if (!email || !username || !role) {
+          return new Response(JSON.stringify({ error: "電子郵件、使用者名稱與權限為必填項目" }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        if (!email.includes('@')) {
+          return new Response(JSON.stringify({ error: "電子郵件格式不正確" }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        try {
+          if (password && password.trim() !== '') {
+            // Update including password
+            await env.DB.prepare(
+              "UPDATE users SET email = ?, username = ?, password = ?, role = ? WHERE id = ?"
+            ).bind(email.trim().toLowerCase(), username.trim(), password, role, id).run();
+          } else {
+            // Update without changing password
+            await env.DB.prepare(
+              "UPDATE users SET email = ?, username = ?, role = ? WHERE id = ?"
+            ).bind(email.trim().toLowerCase(), username.trim(), role, id).run();
+          }
+
+          return new Response(JSON.stringify({ success: true }), {
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        } catch (dbErr) {
+          if (dbErr.message && dbErr.message.includes('UNIQUE')) {
+            return new Response(JSON.stringify({ error: "該電子郵件已被其他使用者註冊" }), {
+              status: 400,
+              headers: { 'Content-Type': 'application/json', ...corsHeaders }
+            });
+          }
+          throw dbErr;
+        }
+      }
+
+      // 12. DELETE /api/users/:id (Admin only)
+      if (url.pathname.startsWith('/api/users/') && request.method === 'DELETE') {
+        const currentUser = await getCurrentUser(request, env);
+        if (!currentUser || currentUser.role !== 'admin') {
+          return new Response(JSON.stringify({ error: "權限不足，必須是管理者" }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        const parts = url.pathname.split('/');
+        const id = parseInt(parts[parts.length - 1]);
+        if (isNaN(id)) {
+          return new Response(JSON.stringify({ error: "無效的 ID" }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        // Query the user to delete to check email
+        const userToDelete = await env.DB.prepare(
+          "SELECT email FROM users WHERE id = ?"
+        ).bind(id).first();
+
+        if (!userToDelete) {
+          return new Response(JSON.stringify({ error: "找不到該使用者" }), {
+            status: 404,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        if (userToDelete.email === currentUser.email) {
+          return new Response(JSON.stringify({ error: "無法刪除自己目前登入的帳號" }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        await env.DB.prepare(
+          "DELETE FROM users WHERE id = ?"
+        ).bind(id).run();
 
         return new Response(JSON.stringify({ success: true }), {
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
