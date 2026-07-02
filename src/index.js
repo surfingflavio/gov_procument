@@ -262,7 +262,7 @@ export default {
         }
 
         const body = await request.json();
-        const { uids, case_number, publish_date, end_date, budget, budget_text, urls, is_pinned, is_removed, notes } = body;
+        const { uids, case_number, publish_date, end_date, budget, budget_text, urls, is_pinned, is_locked, is_removed, notes } = body;
 
         if (!uids || !Array.isArray(uids) || uids.length === 0) {
           return new Response(JSON.stringify({ error: "Missing uids" }), {
@@ -302,6 +302,10 @@ export default {
           if (is_pinned !== undefined) {
             updates.push("is_pinned = ?");
             values.push(is_pinned);
+          }
+          if (is_locked !== undefined) {
+            updates.push("is_locked = ?");
+            values.push(is_locked);
           }
           if (is_removed !== undefined) {
             updates.push("is_removed = ?");

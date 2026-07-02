@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS tenders (
     budget_text TEXT,            -- Formatted budget amount (e.g., "19,800,000元")
     url TEXT,                    -- Announcement URL
     is_pinned INTEGER DEFAULT 0,
+    is_locked INTEGER DEFAULT 0,
     is_removed INTEGER DEFAULT 0,
     is_edited INTEGER DEFAULT 0,
     notes TEXT DEFAULT '',
