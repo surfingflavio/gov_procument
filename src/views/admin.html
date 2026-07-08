@@ -450,7 +450,12 @@
                 </div>
                 <div class="form-group">
                     <label for="login-password" style="color: #ffffff; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); font-weight: 600;">密碼</label>
-                    <input type="password" id="login-password" class="form-control" placeholder="••••••" required autocomplete="current-password">
+                    <div style="position: relative; width: 100%;">
+                        <input type="password" id="login-password" class="form-control" style="padding-right: 2.5rem;" placeholder="••••••" required autocomplete="current-password">
+                        <button type="button" id="toggle-password" onclick="togglePasswordVisibility()" style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; padding: 0;">
+                            <span id="password-toggle-icon">👁️</span>
+                        </button>
+                    </div>
                 </div>
                 <button type="submit" id="login-btn" class="btn" style="margin-top: 1rem; background-color: #2563eb; color: #ffffff;" onmouseover="this.style.backgroundColor='#1d4ed8'" onmouseout="this.style.backgroundColor='#2563eb'">
                     <span>登入</span>
@@ -610,6 +615,18 @@
             currentUser = null;
             loginScreen.style.display = 'flex';
             adminDashboard.style.display = 'none';
+        }
+
+        function togglePasswordVisibility() {
+            const passwordInput = document.getElementById('login-password');
+            const toggleIcon = document.getElementById('password-toggle-icon');
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.textContent = '🙈';
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.textContent = '👁️';
+            }
         }
 
         // 2. Login Handler

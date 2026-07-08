@@ -1004,7 +1004,12 @@
                 </div>
                 <div style="text-align: left; margin-bottom: 1.25rem;">
                     <label style="display: block; font-size: 0.88rem; font-weight: 600; color: #ffffff; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); margin-bottom: 0.5rem;" for="login-password">密碼</label>
-                    <input type="password" id="login-password" style="width: 100%; background-color: #131a26; border: 1px solid #2d3748; color: #ffffff; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.95rem;" placeholder="••••••" required autocomplete="current-password">
+                    <div style="position: relative; width: 100%;">
+                        <input type="password" id="login-password" style="width: 100%; background-color: #131a26; border: 1px solid #2d3748; color: #ffffff; border-radius: 8px; padding: 0.75rem 2.5rem 0.75rem 1rem; font-size: 0.95rem;" placeholder="••••••" required autocomplete="current-password">
+                        <button type="button" id="toggle-password" onclick="togglePasswordVisibility()" style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; padding: 0;">
+                            <span id="password-toggle-icon">👁️</span>
+                        </button>
+                    </div>
                 </div>
                 <button type="submit" id="login-btn" style="background-color: #2563eb; color: #ffffff; width: 100%; display: inline-flex; align-items: center; justify-content: center; padding: 0.75rem 1.5rem; font-size: 0.95rem; font-weight: 600; border-radius: 8px; border: none; cursor: pointer; transition: all 0.2s; margin-top: 1rem;" onmouseover="this.style.backgroundColor='#1d4ed8'" onmouseout="this.style.backgroundColor='#2563eb'">
                     <span>登入</span>
@@ -1917,6 +1922,18 @@
             document.getElementById('login-container').style.display = 'flex';
             document.getElementById('dashboard-container').style.display = 'none';
             document.getElementById('user-info-display').style.display = 'none';
+        }
+
+        function togglePasswordVisibility() {
+            const passwordInput = document.getElementById('login-password');
+            const toggleIcon = document.getElementById('password-toggle-icon');
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.textContent = '🙈';
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.textContent = '👁️';
+            }
         }
 
         async function handleLogin(e) {
