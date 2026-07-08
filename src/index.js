@@ -153,6 +153,15 @@ export default {
           });
         }
 
+        // Verify admin role
+        const currentUser = await getCurrentUser(request, env);
+        if (!currentUser || currentUser.role !== 'admin') {
+          return new Response(JSON.stringify({ error: "權限不足，必須是管理者才能更新" }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
         console.log("Manual sync triggered via POST /api/sync");
         // Run sync process
         const result = await syncTenders(env.DB, env);
