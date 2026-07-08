@@ -1033,10 +1033,6 @@
                         <span id="sync-icon">🔄</span>
                         <span id="sync-text">立即同步資料</span>
                     </button>
-                    <button id="recipient-btn" class="btn-recipient" onclick="openRecipientModal()">
-                        <span>👥</span>
-                        <span>收件人管理</span>
-                    </button>
                     <button id="logout-btn" class="btn-recipient" onclick="handleLogout()" style="background: none; border: 1px solid var(--border);">
                         <span>🚪</span>
                         <span>登出</span>
@@ -1120,58 +1116,6 @@
         </main>
     </div>
 
-    <!-- Recipient Management Modal -->
-    <div id="recipient-modal" class="modal-overlay">
-        <div class="modal-card">
-            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <div style="display: flex; align-items: center; gap: 1rem;">
-                    <h2 style="margin: 0;">👥 收件人管理</h2>
-                    <button type="button" id="send-test-email-btn" onclick="sendTestEmail()" style="background-color: var(--accent); color: #fff; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.25rem; transition: background-color 0.2s;">
-                        <span>✉️</span>
-                        <span>發送測試信</span>
-                    </button>
-                </div>
-                <button class="btn-close" onclick="closeRecipientModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <!-- Add/Edit Recipient Form -->
-                <form id="recipient-form" onsubmit="handleRecipientSubmit(event)">
-                    <input type="hidden" id="recipient-id">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="recipient-name">姓名</label>
-                            <input type="text" id="recipient-name" required placeholder="例如：張小明">
-                        </div>
-                        <div class="form-group">
-                            <label for="recipient-email">電子郵件</label>
-                            <input type="email" id="recipient-email" required placeholder="例如：xiaoming@example.com">
-                        </div>
-                        <button type="submit" id="recipient-submit-btn" class="btn-submit">新增</button>
-                        <button type="button" id="recipient-cancel-btn" class="btn-cancel" onclick="resetRecipientForm()" style="display: none;">取消</button>
-                    </div>
-                </form>
-
-                <!-- Recipient List Table -->
-                <div class="recipient-table-wrapper">
-                    <table class="recipient-table">
-                        <thead>
-                            <tr>
-                                <th>姓名</th>
-                                <th>電子郵件</th>
-                                <th style="width: 120px; text-align: center;">操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="recipient-list-body">
-                            <!-- Dynamic recipients list -->
-                        </tbody>
-                    </table>
-                    <div id="recipient-empty" class="recipient-empty" style="display: none;">
-                        <p>目前沒有收件人資料</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Edit Tender Modal -->
     <div id="edit-tender-modal" class="modal-overlay">
@@ -1756,144 +1700,7 @@
             }, 4000);
         }
 
-        // --- Recipient Management System ---
-        let recipients = [];
 
-        function openRecipientModal() {
-            const modal = document.getElementById('recipient-modal');
-            modal.classList.add('open');
-            fetchRecipients();
-        }
-
-        function closeRecipientModal() {
-            const modal = document.getElementById('recipient-modal');
-            modal.classList.remove('open');
-            resetRecipientForm();
-        }
-
-        async function fetchRecipients() {
-            try {
-                const response = await fetch('/api/recipients');
-                if (response.status === 401) {
-                    showLogin();
-                    return;
-                }
-                if (!response.ok) throw new Error('無法載入收件人');
-                recipients = await response.json();
-                renderRecipients();
-            } catch (err) {
-                console.error(err);
-                showToast('❌ 讀取收件人清單失敗', '⚠️');
-            }
-        }
-
-        function renderRecipients() {
-            const tbody = document.getElementById('recipient-list-body');
-            const emptyEl = document.getElementById('recipient-empty');
-            tbody.innerHTML = '';
-
-            if (recipients.length === 0) {
-                emptyEl.style.display = 'block';
-                return;
-            }
-            emptyEl.style.display = 'none';
-
-            recipients.forEach(r => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${escapeHtml(r.name)}</td>
-                    <td>${escapeHtml(r.email)}</td>
-                    <td style="text-align: center;">
-                        <button class="btn-action-edit" onclick="editRecipient(${r.id}, '${escapeQuote(r.name)}', '${escapeQuote(r.email)}')">✏️</button>
-                        <button class="btn-action-delete" onclick="deleteRecipient(${r.id})">🗑️</button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function escapeHtml(str) {
-            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-        }
-
-        function escapeQuote(str) {
-            return str.replace(/'/g, "\\'");
-        }
-
-        async function handleRecipientSubmit(event) {
-            event.preventDefault();
-            const idInput = document.getElementById('recipient-id');
-            const nameInput = document.getElementById('recipient-name');
-            const emailInput = document.getElementById('recipient-email');
-            const submitBtn = document.getElementById('recipient-submit-btn');
-
-            const id = idInput.value;
-            const name = nameInput.value.trim();
-            const email = emailInput.value.trim();
-
-            if (!name || !email) return;
-
-            submitBtn.disabled = true;
-
-            const isEdit = id !== '';
-            const url = isEdit ? `/api/recipients/${id}` : '/api/recipients';
-            const method = isEdit ? 'PUT' : 'POST';
-
-            try {
-                const response = await fetch(url, {
-                    method: method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, email })
-                });
-
-                const data = await response.json();
-                if (!response.ok) {
-                    throw new Error(data.error || '儲存失敗');
-                }
-
-                showToast(isEdit ? '✅ 收件人更新成功！' : '✅ 成功新增收件人！', '🎉');
-                resetRecipientForm();
-                await fetchRecipients();
-            } catch (err) {
-                console.error(err);
-                showToast(`❌ ${err.message}`, '⚠️');
-            } finally {
-                submitBtn.disabled = false;
-            }
-        }
-
-        function editRecipient(id, name, email) {
-            document.getElementById('recipient-id').value = id;
-            document.getElementById('recipient-name').value = name;
-            document.getElementById('recipient-email').value = email;
-            
-            document.getElementById('recipient-submit-btn').innerText = '儲存';
-            document.getElementById('recipient-cancel-btn').style.display = 'inline-block';
-        }
-
-        function resetRecipientForm() {
-            document.getElementById('recipient-id').value = '';
-            document.getElementById('recipient-name').value = '';
-            document.getElementById('recipient-email').value = '';
-            
-            document.getElementById('recipient-submit-btn').innerText = '新增';
-            document.getElementById('recipient-cancel-btn').style.display = 'none';
-        }
-
-        async function deleteRecipient(id) {
-            if (!confirm('確定要刪除此收件人嗎？')) return;
-
-            try {
-                const response = await fetch(`/api/recipients/${id}`, { method: 'DELETE' });
-                if (!response.ok) throw new Error('刪除失敗');
-                
-                showToast('🗑️ 收件人已成功刪除', '👍');
-                await fetchRecipients();
-            } catch (err) {
-                console.error(err);
-                showToast('❌ 刪除收件人失敗', '⚠️');
-            }
-        }
 
         // API calls for tenders management
         async function saveTenderUpdate(payload) {
@@ -2144,39 +1951,7 @@
             }
         }
 
-        async function sendTestEmail() {
-            const btn = document.getElementById('send-test-email-btn');
-            const originalText = btn.innerHTML;
-            
-            if (!confirm('是否要向目前收件人清單中的所有名單發送測試信？')) return;
-            
-            btn.disabled = true;
-            btn.innerHTML = '<span>⏳</span><span>傳送中...</span>';
-            
-            try {
-                const response = await fetch('/api/test-email', {
-                    method: 'POST'
-                });
-                
-                const data = await response.json();
-                if (response.status === 401) {
-                    showLogin();
-                    return;
-                }
-                
-                if (!response.ok) {
-                    throw new Error(data.error || '傳送失敗');
-                }
-                
-                showToast('🎉 測試信已順利送出給所有收件人！', '✅');
-            } catch (err) {
-                console.error(err);
-                showToast(`❌ 傳送測試信失敗: ${err.message}`, '⚠️');
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalText;
-            }
-        }
+
 
         // Initialize on load
         window.addEventListener('DOMContentLoaded', checkAuth);

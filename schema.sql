@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS users (
     username TEXT NOT NULL,
     password TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'user',
+    receive_notifications INTEGER NOT NULL DEFAULT 1,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 

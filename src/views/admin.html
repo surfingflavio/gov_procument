@@ -281,6 +281,18 @@
             border: 1px solid rgba(16, 185, 129, 0.2);
         }
 
+        .badge-enabled {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .badge-disabled {
+            background-color: rgba(156, 163, 175, 0.1);
+            color: var(--text-secondary);
+            border: 1px solid rgba(156, 163, 175, 0.2);
+        }
+
         .actions-cell {
             display: flex;
             gap: 0.5rem;
@@ -461,9 +473,14 @@
             <div class="panel">
                 <div class="panel-header">
                     <h2 class="panel-title">👥 使用者帳號與權限管理</h2>
-                    <button class="btn btn-primary" onclick="openAddUserModal()" style="width: auto; padding: 0.5rem 1rem; font-size: 0.88rem;">
-                        <span>➕ 新增使用者</span>
-                    </button>
+                    <div style="display: flex; gap: 0.75rem;">
+                        <button class="btn btn-secondary" id="send-test-email-btn" onclick="sendTestEmail()" style="width: auto; padding: 0.5rem 1rem; font-size: 0.88rem; border-color: var(--border);">
+                            <span>✉️ 發送測試信</span>
+                        </button>
+                        <button class="btn btn-primary" onclick="openAddUserModal()" style="width: auto; padding: 0.5rem 1rem; font-size: 0.88rem;">
+                            <span>➕ 新增使用者</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="table-responsive">
@@ -473,6 +490,7 @@
                                 <th style="width: 60px;">ID</th>
                                 <th>使用者名稱</th>
                                 <th>帳號 (Email)</th>
+                                <th style="width: 120px; text-align: center;">更新通知</th>
                                 <th style="width: 120px;">角色權限</th>
                                 <th style="width: 120px; text-align: center;">操作管理</th>
                             </tr>
@@ -517,6 +535,10 @@
                         <option value="user">使用者 (User)</option>
                         <option value="admin">管理者 (Admin)</option>
                     </select>
+                </div>
+                <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1.5rem;">
+                    <input type="checkbox" id="modal-receive-notifications" style="width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer;">
+                    <label for="modal-receive-notifications" style="margin-bottom: 0; cursor: pointer; user-select: none;">接收更新通知郵件</label>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" onclick="closeUserModal()">取消</button>
@@ -653,7 +675,7 @@
         // 5. Render Users Table
         function renderUsersTable() {
             if (usersList.length === 0) {
-                userTableBody.innerHTML = `<tr><td colspan="5" class="text-center" style="color: var(--text-secondary); padding: 2rem;">目前無任何使用者</td></tr>`;
+                userTableBody.innerHTML = `<tr><td colspan="6" class="text-center" style="color: var(--text-secondary); padding: 2rem;">目前無任何使用者</td></tr>`;
                 return;
             }
 
@@ -661,11 +683,15 @@
                 const roleText = user.role === 'admin' ? '管理者' : '使用者';
                 const badgeClass = user.role === 'admin' ? 'badge-admin' : 'badge-user';
                 
+                const notifText = user.receive_notifications === 1 ? '開啟' : '關閉';
+                const notifClass = user.receive_notifications === 1 ? 'badge-enabled' : 'badge-disabled';
+                
                 return `
                     <tr>
                         <td>${user.id}</td>
                         <td style="font-weight: 500;">${escapeHtml(user.username)}</td>
                         <td>${escapeHtml(user.email)}</td>
+                        <td style="text-align: center;"><span class="badge ${notifClass}">${notifText}</span></td>
                         <td><span class="badge ${badgeClass}">${roleText}</span></td>
                         <td class="text-center">
                             <div class="actions-cell" style="justify-content: center;">
@@ -690,6 +716,7 @@
             modalPasswordLabel.textContent = '密碼';
             passwordHelp.style.display = 'none';
             modalRole.value = 'user';
+            document.getElementById('modal-receive-notifications').checked = true;
             
             userModal.classList.add('active');
         }
@@ -708,6 +735,7 @@
             modalPasswordLabel.textContent = '密碼 (選填)';
             passwordHelp.style.display = 'block';
             modalRole.value = user.role;
+            document.getElementById('modal-receive-notifications').checked = user.receive_notifications === 1;
             
             userModal.classList.add('active');
         }
@@ -724,6 +752,7 @@
             const email = modalEmail.value.trim();
             const password = modalPassword.value;
             const role = modalRole.value;
+            const receive_notifications = document.getElementById('modal-receive-notifications').checked ? 1 : 0;
 
             modalError.style.display = 'none';
 
@@ -733,7 +762,7 @@
                 return;
             }
 
-            const payload = { username, email, role };
+            const payload = { username, email, role, receive_notifications };
             if (password && password.trim() !== '') {
                 payload.password = password;
             }
@@ -825,6 +854,41 @@
                 .replace(/>/g, "&gt;")
                 .replace(/"/g, "&quot;")
                 .replace(/'/g, "&#039;");
+        }
+
+        // 9. Send Test Email Function
+        async function sendTestEmail() {
+            const btn = document.getElementById('send-test-email-btn');
+            const originalText = btn.innerHTML;
+            
+            if (!confirm('是否要向目前所有已開啟「更新通知」的使用者發送測試信？')) return;
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳ 傳送中...</span>';
+            
+            try {
+                const response = await fetch('/api/test-email', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                if (response.status === 401) {
+                    showLogin();
+                    return;
+                }
+                
+                if (!response.ok) {
+                    throw new Error(data.error || '傳送失敗');
+                }
+                
+                showToast('🎉 測試信已順利送出給所有開啟通知的使用者！', 'success');
+            } catch (err) {
+                console.error(err);
+                showToast(`❌ 傳送測試信失敗: ${err.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
         }
     </script>
 </body>

@@ -1,7 +1,7 @@
 // src/index.js (admin console active)
 import htmlContent from './views/dashboard.html';
 import adminHtmlContent from './views/admin.html';
-import { syncTenders } from './scraper.js';
+import { syncTenders, buildNotificationEmail } from './scraper.js';
 import { WorkerMailer } from 'worker-mailer';
 
 
@@ -181,9 +181,9 @@ export default {
           });
         }
 
-        // Query all recipients from DB
+        // Query all users who receive notifications
         const { results: dbRecipients } = await env.DB.prepare(
-          "SELECT name, email FROM recipients"
+          "SELECT username AS name, email FROM users WHERE receive_notifications = 1"
         ).all();
 
         const queryTo = url.searchParams.get('to');
@@ -199,8 +199,10 @@ export default {
         const fromEmail = 'surfingflavio@gmail.com';
         const fromName = '雲力橘子_招標資訊分析系統';
 
-        const subject = url.searchParams.get('subject') || '專案進度週報';
-        const bodyText = url.searchParams.get('body') || '這是測試信';
+        // Query the latest 5 tenders from database to serve as test payload
+        const { results: recentTenders } = await env.DB.prepare(
+          "SELECT * FROM tenders ORDER BY publish_date DESC LIMIT 5"
+        ).all();
 
         try {
           const mailer = await WorkerMailer.connect({
@@ -214,12 +216,17 @@ export default {
             }
           });
 
-          await mailer.send({
-            from: { name: fromName, email: fromEmail },
-            to: toList,
-            subject: subject,
-            html: bodyText
-          });
+          for (const r of toList) {
+            const greetName = r.name ? r.name.trim() : r.email.split('@')[0];
+            const { subject, htmlBody } = buildNotificationEmail(recentTenders || [], greetName);
+
+            await mailer.send({
+              from: { name: fromName, email: fromEmail },
+              to: [r],
+              subject: subject,
+              html: htmlBody
+            });
+          }
 
           return new Response(JSON.stringify({ success: true, recipients: toList }), {
             headers: { 'Content-Type': 'application/json', ...corsHeaders }
@@ -529,7 +536,7 @@ export default {
         }
 
         const { results } = await env.DB.prepare(
-          "SELECT id, email, username, role, created_at FROM users ORDER BY id ASC"
+          "SELECT id, email, username, role, receive_notifications, created_at FROM users ORDER BY id ASC"
         ).all();
 
         return new Response(JSON.stringify(results), {
@@ -547,7 +554,7 @@ export default {
           });
         }
 
-        const { email, username, password, role } = await request.json();
+        const { email, username, password, role, receive_notifications } = await request.json();
         if (!email || !username || !password || !role) {
           return new Response(JSON.stringify({ error: "所有欄位皆為必填項目" }), {
             status: 400,
@@ -562,10 +569,12 @@ export default {
           });
         }
 
+        const receive_notif = (receive_notifications === undefined || receive_notifications === null) ? 1 : (receive_notifications ? 1 : 0);
+
         try {
           await env.DB.prepare(
-            "INSERT INTO users (email, username, password, role) VALUES (?, ?, ?, ?)"
-          ).bind(email.trim().toLowerCase(), username.trim(), password, role).run();
+            "INSERT INTO users (email, username, password, role, receive_notifications) VALUES (?, ?, ?, ?, ?)"
+          ).bind(email.trim().toLowerCase(), username.trim(), password, role, receive_notif).run();
 
           return new Response(JSON.stringify({ success: true }), {
             headers: { 'Content-Type': 'application/json', ...corsHeaders }
@@ -600,7 +609,7 @@ export default {
           });
         }
 
-        const { email, username, password, role } = await request.json();
+        const { email, username, password, role, receive_notifications } = await request.json();
         if (!email || !username || !role) {
           return new Response(JSON.stringify({ error: "電子郵件、使用者名稱與權限為必填項目" }), {
             status: 400,
@@ -615,17 +624,19 @@ export default {
           });
         }
 
+        const receive_notif = (receive_notifications === undefined || receive_notifications === null) ? 1 : (receive_notifications ? 1 : 0);
+
         try {
           if (password && password.trim() !== '') {
             // Update including password
             await env.DB.prepare(
-              "UPDATE users SET email = ?, username = ?, password = ?, role = ? WHERE id = ?"
-            ).bind(email.trim().toLowerCase(), username.trim(), password, role, id).run();
+              "UPDATE users SET email = ?, username = ?, password = ?, role = ?, receive_notifications = ? WHERE id = ?"
+            ).bind(email.trim().toLowerCase(), username.trim(), password, role, receive_notif, id).run();
           } else {
             // Update without changing password
             await env.DB.prepare(
-              "UPDATE users SET email = ?, username = ?, role = ? WHERE id = ?"
-            ).bind(email.trim().toLowerCase(), username.trim(), role, id).run();
+              "UPDATE users SET email = ?, username = ?, role = ?, receive_notifications = ? WHERE id = ?"
+            ).bind(email.trim().toLowerCase(), username.trim(), role, receive_notif, id).run();
           }
 
           return new Response(JSON.stringify({ success: true }), {
