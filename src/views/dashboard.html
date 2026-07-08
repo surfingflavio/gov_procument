@@ -991,7 +991,29 @@
     </style>
 </head>
 <body>
-    <div class="container">
+    <!-- LOGIN SCREEN -->
+    <div id="login-container" style="display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 1.5rem; width: 100%;">
+        <div style="background-color: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 2.5rem; width: 100%; max-width: 450px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3); text-align: center;">
+            <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.75rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.5rem;">招標資訊分析</h2>
+            <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 2rem;">請登入以查看政府招標公告</p>
+            <div id="login-error" style="background-color: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); color: var(--error); padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.88rem; margin-bottom: 1.5rem; text-align: left; display: none;"></div>
+            <form onsubmit="handleLogin(event)">
+                <div style="text-align: left; margin-bottom: 1.25rem;">
+                    <label style="display: block; font-size: 0.88rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 0.5rem;" for="login-email">帳號 (電子郵件)</label>
+                    <input type="email" id="login-email" style="width: 100%; background-color: var(--bg-secondary); border: 1px solid var(--border); color: var(--text-primary); border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.95rem;" placeholder="example@gamania.com" required autocomplete="username">
+                </div>
+                <div style="text-align: left; margin-bottom: 1.25rem;">
+                    <label style="display: block; font-size: 0.88rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 0.5rem;" for="login-password">密碼</label>
+                    <input type="password" id="login-password" style="width: 100%; background-color: var(--bg-secondary); border: 1px solid var(--border); color: var(--text-primary); border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.95rem;" placeholder="••••••" required autocomplete="current-password">
+                </div>
+                <button type="submit" id="login-btn" style="background-color: var(--accent); color: #ffffff; width: 100%; display: inline-flex; align-items: center; justify-content: center; padding: 0.75rem 1.5rem; font-size: 0.95rem; font-weight: 600; border-radius: 8px; border: none; cursor: pointer; transition: all 0.2s; margin-top: 1rem;">
+                    <span>登入</span>
+                </button>
+            </form>
+        </div>
+    </div>
+    <div id="dashboard-container" style="display: none;">
+        <div class="container">
         <!-- Sticky Header Wrapper -->
         <div class="sticky-header">
             <!-- Header -->
@@ -1014,6 +1036,10 @@
                     <button id="recipient-btn" class="btn-recipient" onclick="openRecipientModal()">
                         <span>👥</span>
                         <span>收件人管理</span>
+                    </button>
+                    <button id="logout-btn" class="btn-recipient" onclick="handleLogout()" style="background: none; border: 1px solid var(--border);">
+                        <span>🚪</span>
+                        <span>登出</span>
                     </button>
                 </div>
             </header>
@@ -1097,8 +1123,14 @@
     <!-- Recipient Management Modal -->
     <div id="recipient-modal" class="modal-overlay">
         <div class="modal-card">
-            <div class="modal-header">
-                <h2>👥 收件人管理</h2>
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <h2 style="margin: 0;">👥 收件人管理</h2>
+                    <button type="button" id="send-test-email-btn" onclick="sendTestEmail()" style="background-color: var(--accent); color: #fff; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.25rem; transition: background-color 0.2s;">
+                        <span>✉️</span>
+                        <span>發送測試信</span>
+                    </button>
+                </div>
                 <button class="btn-close" onclick="closeRecipientModal()">&times;</button>
             </div>
             <div class="modal-body">
@@ -1232,6 +1264,10 @@
             showLoader(true);
             try {
                 const response = await fetch('/api/tenders');
+                if (response.status === 401) {
+                    showLogin();
+                    return;
+                }
                 if (!response.ok) throw new Error('API 請求失敗');
                 rawTenders = await response.json();
                 
@@ -1738,6 +1774,10 @@
         async function fetchRecipients() {
             try {
                 const response = await fetch('/api/recipients');
+                if (response.status === 401) {
+                    showLogin();
+                    return;
+                }
                 if (!response.ok) throw new Error('無法載入收件人');
                 recipients = await response.json();
                 renderRecipients();
@@ -1994,8 +2034,153 @@
             document.body.removeChild(form);
         }
 
+        // Inactivity & Auth Logic
+        let currentUser = null;
+        let inactivityTimer = null;
+        const INACTIVITY_LIMIT = 15 * 60 * 1000; // 15 minutes auto logout
+
+        function resetInactivityTimer() {
+            if (!currentUser) return;
+            if (inactivityTimer) clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(autoLogout, INACTIVITY_LIMIT);
+        }
+
+        async function autoLogout() {
+            try {
+                await fetch('/api/auth/logout', { method: 'POST' });
+                currentUser = null;
+                destroyInactivityTracking();
+                showToast('⏰ 您已因閒置過久自動登出！', '⚠️');
+                showLogin();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function initInactivityTracking() {
+            const events = ['mousemove', 'keydown', 'mousedown', 'scroll', 'click', 'touchstart'];
+            events.forEach(name => {
+                window.addEventListener(name, resetInactivityTimer, true);
+            });
+            resetInactivityTimer();
+        }
+
+        function destroyInactivityTracking() {
+            const events = ['mousemove', 'keydown', 'mousedown', 'scroll', 'click', 'touchstart'];
+            events.forEach(name => {
+                window.removeEventListener(name, resetInactivityTimer, true);
+            });
+            if (inactivityTimer) {
+                clearTimeout(inactivityTimer);
+                inactivityTimer = null;
+            }
+        }
+
+        async function checkAuth() {
+            try {
+                const res = await fetch('/api/auth/me');
+                const data = await res.json();
+                if (data.authenticated) {
+                    currentUser = data.user;
+                    document.getElementById('login-container').style.display = 'none';
+                    document.getElementById('dashboard-container').style.display = 'block';
+                    initInactivityTracking();
+                    fetchTenders();
+                } else {
+                    showLogin();
+                }
+            } catch (err) {
+                showLogin();
+            }
+        }
+
+        function showLogin() {
+            currentUser = null;
+            destroyInactivityTracking();
+            document.getElementById('login-container').style.display = 'flex';
+            document.getElementById('dashboard-container').style.display = 'none';
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const submitBtn = document.getElementById('login-btn');
+            const errorDiv = document.getElementById('login-error');
+            
+            errorDiv.style.display = 'none';
+            submitBtn.disabled = true;
+            submitBtn.querySelector('span').textContent = '登入中...';
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.error || '登入失敗');
+                }
+                showToast('🔑 登入成功！', '🎉');
+                checkAuth();
+            } catch (err) {
+                errorDiv.textContent = err.message;
+                errorDiv.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.querySelector('span').textContent = '登入';
+            }
+        }
+
+        async function handleLogout() {
+            if (!confirm('是否確定登出系統？')) return;
+            try {
+                await fetch('/api/auth/logout', { method: 'POST' });
+                showToast('🚪 已成功登出！', '👍');
+                showLogin();
+            } catch (err) {
+                showToast('❌ 登出發生錯誤', '⚠️');
+            }
+        }
+
+        async function sendTestEmail() {
+            const btn = document.getElementById('send-test-email-btn');
+            const originalText = btn.innerHTML;
+            
+            if (!confirm('是否要向目前收件人清單中的所有名單發送測試信？')) return;
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳</span><span>傳送中...</span>';
+            
+            try {
+                const response = await fetch('/api/test-email', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                if (response.status === 401) {
+                    showLogin();
+                    return;
+                }
+                
+                if (!response.ok) {
+                    throw new Error(data.error || '傳送失敗');
+                }
+                
+                showToast('🎉 測試信已順利送出給所有收件人！', '✅');
+            } catch (err) {
+                console.error(err);
+                showToast(`❌ 傳送測試信失敗: ${err.message}`, '⚠️');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
         // Initialize on load
-        window.addEventListener('DOMContentLoaded', fetchTenders);
+        window.addEventListener('DOMContentLoaded', checkAuth);
     </script>
+    </div>
 </body>
 </html>

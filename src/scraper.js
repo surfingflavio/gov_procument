@@ -1,4 +1,6 @@
 // src/scraper.js
+import { WorkerMailer } from 'worker-mailer';
+
 
 // Regular expression to parse list items from acebidx search page
 // Matches the structure of list items on acebidx
@@ -565,15 +567,13 @@ function escapeHtml(str) {
     .replace(/'/g, "&#039;");
 }
 
-// Send email notifications to all registered recipients via Resend API
+// Send email notifications to all registered recipients via Gmail SMTP using worker-mailer
 async function sendEmailNotification(recipients, newTenders, env) {
-  if (!env || !env.RESEND_API_KEY) {
-    console.warn("RESEND_API_KEY is not configured. Skipping email notification.");
+  if (!env || !env.GMAIL_PASS) {
+    console.warn("GMAIL_PASS is not configured. Skipping email notification.");
     return;
   }
 
-  const sendEmailURL = 'https://api.resend.com/emails';
-  const apiKey = env.RESEND_API_KEY;
   const isNoUpdate = newTenders.length === 0;
   let htmlBody = '';
 
@@ -659,35 +659,37 @@ async function sendEmailNotification(recipients, newTenders, env) {
     `;
   }
 
-  const toEmails = recipients.map(r => r.email);
-  const fromEmail = env.FROM_EMAIL || 'surfingflavio@gmail.com';
+  const toList = recipients.map(r => ({ name: r.name || '', email: r.email }));
+  const fromEmail = 'surfingflavio@gmail.com';
   const fromName = '雲力橘子_招標資訊分析系統';
 
   const subjectText = isNoUpdate 
     ? '【雲力橘子】招標資訊分析 - 同步完成通知 (無更新資料)'
     : `【雲力橘子】新增標案通知 (${newTenders.length} 筆新資料)`;
 
-  const res = await fetch(sendEmailURL, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      from: `${fromName} <${fromEmail}>`,
-      to: toEmails,
-      subject: subjectText,
-      html: htmlBody
-    })
+  console.log(`Connecting to Gmail SMTP to send notification to ${toList.length} recipients...`);
+  
+  const mailer = await WorkerMailer.connect({
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    authType: 'login',
+    credentials: {
+      username: fromEmail,
+      password: env.GMAIL_PASS
+    }
   });
 
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Resend API returned status ${res.status}: ${errText}`);
-  }
+  await mailer.send({
+    from: { name: fromName, email: fromEmail },
+    to: toList,
+    subject: subjectText,
+    html: htmlBody
+  });
 
-  console.log(`Notification email sent successfully via Resend to ${toEmails.length} recipients. No updates: ${isNoUpdate}`);
+  console.log(`Notification email sent successfully via Gmail SMTP to ${toList.length} recipients. No updates: ${isNoUpdate}`);
 }
+
 
 // Synchronize all tenders into Cloudflare D1 Database
 export async function syncTenders(db, env) {

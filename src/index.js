@@ -2,6 +2,8 @@
 import htmlContent from './views/dashboard.html';
 import adminHtmlContent from './views/admin.html';
 import { syncTenders } from './scraper.js';
+import { WorkerMailer } from 'worker-mailer';
+
 
 // Web Crypto Session Helpers
 const fallbackSecret = "dgc-procu-secret-key-111111";
@@ -105,6 +107,22 @@ export default {
         });
       }
 
+      // ==========================================
+      // AUTHENTICATION CHECKS FOR MAIN APPLICATION APIS
+      // ==========================================
+      if (url.pathname.startsWith('/api/') && 
+          url.pathname !== '/api/auth/login' && 
+          url.pathname !== '/api/auth/logout' && 
+          url.pathname !== '/api/auth/me') {
+        const currentUser = await getCurrentUser(request, env);
+        if (!currentUser) {
+          return new Response(JSON.stringify({ error: "未登入，請先登入系統" }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+      }
+
       // 2. API: Get all tenders from D1 Database
       if (url.pathname === '/api/tenders') {
         if (!env.DB) {
@@ -149,9 +167,8 @@ export default {
 
       // Temp API: Test sending email
       if (url.pathname === '/api/test-email') {
-        const apiKey = env.RESEND_API_KEY;
-        if (!apiKey) {
-          return new Response(JSON.stringify({ error: "RESEND_API_KEY is not configured. Please use 'wrangler secret put RESEND_API_KEY' to set it." }), {
+        if (!env.GMAIL_PASS) {
+          return new Response(JSON.stringify({ error: "GMAIL_PASS is not configured. Please add it to your .dev.vars file or use 'wrangler secret put GMAIL_PASS' to set it." }), {
             status: 400,
             headers: { 'Content-Type': 'application/json', ...corsHeaders }
           });
@@ -166,50 +183,53 @@ export default {
 
         // Query all recipients from DB
         const { results: dbRecipients } = await env.DB.prepare(
-          "SELECT email FROM recipients"
+          "SELECT name, email FROM recipients"
         ).all();
 
         const queryTo = url.searchParams.get('to');
-        let toEmails = [];
+        let toList = [];
         if (queryTo) {
-          toEmails = [queryTo];
+          toList = [{ name: '測試收件人', email: queryTo }];
         } else if (dbRecipients && dbRecipients.length > 0) {
-          toEmails = dbRecipients.map(r => r.email);
+          toList = dbRecipients.map(r => ({ name: r.name || '', email: r.email }));
         } else {
-          toEmails = ['flaviochang@gamania.com'];
+          toList = [{ name: 'Flavio', email: 'flaviochang@gamania.com' }];
         }
 
-        const fromEmail = env.FROM_EMAIL || 'surfingflavio@gmail.com';
+        const fromEmail = 'surfingflavio@gmail.com';
         const fromName = '雲力橘子_招標資訊分析系統';
 
         const subject = url.searchParams.get('subject') || '專案進度週報';
         const bodyText = url.searchParams.get('body') || '這是測試信';
 
-        const res = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            from: `${fromName} <${fromEmail}>`,
-            to: toEmails,
+        try {
+          const mailer = await WorkerMailer.connect({
+            host: 'smtp.gmail.com',
+            port: 465,
+            secure: true,
+            authType: 'login',
+            credentials: {
+              username: fromEmail,
+              password: env.GMAIL_PASS
+            }
+          });
+
+          await mailer.send({
+            from: { name: fromName, email: fromEmail },
+            to: toList,
             subject: subject,
             html: bodyText
-          })
-        });
+          });
 
-        if (!res.ok) {
-          const errText = await res.text();
-          return new Response(JSON.stringify({ error: `Resend error: ${errText}` }), {
-            status: res.status,
+          return new Response(JSON.stringify({ success: true, recipients: toList }), {
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        } catch (mailErr) {
+          return new Response(JSON.stringify({ error: `Gmail SMTP error: ${mailErr.message || mailErr}` }), {
+            status: 500,
             headers: { 'Content-Type': 'application/json', ...corsHeaders }
           });
         }
-
-        return new Response(JSON.stringify({ success: true, recipients: toEmails }), {
-          headers: { 'Content-Type': 'application/json', ...corsHeaders }
-        });
       }
 
       // 4. API: Recipients CRUD
