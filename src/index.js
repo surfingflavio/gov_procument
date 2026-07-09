@@ -208,10 +208,26 @@ export default {
         const fromEmail = 'surfingflavio@gmail.com';
         const fromName = '雲力橘子_招標資訊分析系統';
 
-        // Query the latest 5 tenders from database to serve as test payload
-        const { results: recentTenders } = await env.DB.prepare(
-          "SELECT * FROM tenders ORDER BY publish_date DESC LIMIT 5"
-        ).all();
+        // Query tenders created today (Taiwan local time) for test payload, fallback to latest 5 if none
+        let recentTenders = [];
+        try {
+          const { results } = await env.DB.prepare(`
+            SELECT * FROM tenders 
+            WHERE date(created_at, '+8 hours') = date('now', '+8 hours')
+              AND is_removed = 0
+            ORDER BY publish_date DESC, id DESC
+          `).all();
+          if (results && results.length > 0) {
+            recentTenders = results;
+          } else {
+            const { results: fallback } = await env.DB.prepare(
+              "SELECT * FROM tenders WHERE is_removed = 0 ORDER BY publish_date DESC LIMIT 5"
+            ).all();
+            recentTenders = fallback || [];
+          }
+        } catch (dbErr) {
+          console.error("Failed to query test email tenders:", dbErr);
+        }
 
         try {
           const mailer = await WorkerMailer.connect({
