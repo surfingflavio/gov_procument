@@ -714,7 +714,7 @@ export function buildNotificationEmail(newTenders, greetName = '') {
 }
 
 // Send email notifications to all registered recipients via Gmail SMTP using worker-mailer
-async function sendEmailNotification(recipients, newTenders, env) {
+async function sendEmailNotification(recipients, todayTenders, env) {
   if (!env || !env.GMAIL_PASS) {
     console.warn("GMAIL_PASS is not configured. Skipping email notification.");
     return;
@@ -738,7 +738,7 @@ async function sendEmailNotification(recipients, newTenders, env) {
 
   for (const r of recipients) {
     const greetName = r.name ? r.name.trim() : r.email.split('@')[0];
-    const { subject, htmlBody } = buildNotificationEmail(newTenders, greetName);
+    const { subject, htmlBody } = buildNotificationEmail(todayTenders, greetName);
     
     console.log(`Sending customized email to: ${r.email} (${greetName})...`);
     await mailer.send({
@@ -826,12 +826,30 @@ export async function syncTenders(db, env) {
   
   console.log(`Synchronization finished. Saved/Updated ${totalSaved} biddings. New: ${newTenders.length}`);
 
-  // Send email notifications to all recipients (regardless of whether newTenders.length > 0)
+  // Query all tenders created today (Taiwan local time) to use as the email contents
+  let todayTenders = [];
+  try {
+    const { results } = await db.prepare(`
+      SELECT * FROM tenders 
+      WHERE date(created_at, '+8 hours') = date('now', '+8 hours')
+        AND is_removed = 0
+      ORDER BY publish_date DESC, id DESC
+    `).all();
+    if (results) {
+      todayTenders = results;
+    }
+  } catch (dbErr) {
+    console.error("Failed to fetch today's tenders from database for email:", dbErr);
+    // Fallback to newTenders from this run if query fails
+    todayTenders = newTenders;
+  }
+
+  // Send email notifications to all recipients
   try {
     const { results: recipients } = await db.prepare("SELECT username AS name, email FROM users WHERE receive_notifications = 1").all();
     if (recipients && recipients.length > 0) {
-      console.log(`Sending email notifications to ${recipients.length} recipients...`);
-      await sendEmailNotification(recipients, newTenders, env);
+      console.log(`Sending email notifications containing today's ${todayTenders.length} tenders to ${recipients.length} recipients...`);
+      await sendEmailNotification(recipients, todayTenders, env);
     } else {
       console.log("No recipients found in database. Skipping email notification.");
     }
